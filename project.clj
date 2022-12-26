@@ -1,6 +1,6 @@
-(defproject com.github.strojure/PROJECT_NAME "1.0.0-SNAPSHOT"
-  :description "PROJECT_DESCRIPTION"
-  :url "https://github.com/strojure/PROJECT_NAME"
+(defproject com.github.strojure/ring-stack "1.0.0-SNAPSHOT"
+  :description "More controllable composition of Ring middlewares."
+  :url "https://github.com/strojure/ring-stack"
   :license {:name "The MIT License" :url "http://opensource.org/licenses/MIT"}
 
   :dependencies []

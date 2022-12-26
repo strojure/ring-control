@@ -1,8 +1,8 @@
-# PROJECT_NAME
+# ring-stack
 
-PROJECT_DESCRIPTION
+More controllable composition of Ring middlewares.
 
-[![cljdoc badge](https://cljdoc.org/badge/com.github.strojure/PROJECT_NAME)](https://cljdoc.org/d/com.github.strojure/PROJECT_NAME)
-[![Clojars Project](https://img.shields.io/clojars/v/com.github.strojure/PROJECT_NAME.svg)](https://clojars.org/com.github.strojure/PROJECT_NAME)
+[![cljdoc badge](https://cljdoc.org/badge/com.github.strojure/ring-stack)](https://cljdoc.org/d/com.github.strojure/ring-stack)
+[![Clojars Project](https://img.shields.io/clojars/v/com.github.strojure/ring-stack.svg)](https://clojars.org/com.github.strojure/ring-stack)
 
 ## Motivation
