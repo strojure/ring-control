@@ -1,4 +1,4 @@
-(defproject com.github.strojure/ring-stack "1.0.3-beta1"
+(defproject com.github.strojure/ring-stack "1.0.4-SNAPSHOT"
   :description "More controllable composition of Ring middlewares."
   :url "https://github.com/strojure/ring-stack"
   :license {:name "The MIT License" :url "http://opensource.org/licenses/MIT"}
