@@ -1,5 +1,5 @@
 (ns strojure.ring-stack.core
-  (:import (clojure.lang IFn MultiFn)))
+  (:import (clojure.lang MultiFn Named)))
 
 (set! *warn-on-reflection* true)
 
@@ -8,17 +8,15 @@
 (defn middleware-type
   "Returns dispatch value for middleware object.
 
-  - for map with `:type` returns its value
-  - for keyword returns this keyword
+  - for keyword or symbol returns it
   - for objects with `:type` in meta returns its value
-  - for functions returns `IFn`
+  - for map with `:type` returns its value
   - otherwise returns `(class obj)`
   "
   [obj]
-  (or (and (keyword? obj) obj)
-      (:type obj)
+  (or (when (instance? Named obj) obj)
       (some-> obj meta :type)
-      (and (ifn? obj) IFn)
+      (:type obj)
       (class obj)))
 
 (defmulti as-handler-wrap
@@ -38,21 +36,44 @@
   {:arglists '([obj])}
   middleware-type)
 
-(defmulti require-config
+;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+
+(defmulti required-config
   "Returns configuration `{:keys [outer enter leave inner]}` where every key
   contains sequence of middleware types to be presented in configuration before
   the middleware."
   {:arglists '([obj])}
   middleware-type)
 
-;; Functions are wrappers by themselves.
-;; Wrapper type is not checking, dependencies are not applicable.
-(.addMethod ^MultiFn as-handler-wrap IFn identity)
-(.addMethod ^MultiFn as-request-wrap IFn identity)
-(.addMethod ^MultiFn as-response-wrap IFn identity)
-
 ;; No middleware dependencies by default.
-(.addMethod ^MultiFn require-config :default (constantly nil))
+(.addMethod ^MultiFn required-config :default (constantly nil))
+
+(defn- match-type?
+  [parent]
+  (fn [child] (isa? child parent)))
+
+(defn- validate-required
+  [{:keys [ignore-required] :as config}]
+  (let [config-types (-> (select-keys config [:outer :enter :leave :inner])
+                         (update-vals (partial map middleware-type)))
+        ignore (set ignore-required)]
+    (doseq [[_ group-middlewares], config
+            middleware,,,,,,,,,,,, group-middlewares
+            [config-key req-types] (required-config middleware)
+            req-type,,,,,,,,,,,,,, req-types
+            :when (not (ignore req-type))]
+      (when-not (->> (config-key config-types)
+                     (take-while (complement (match-type? (middleware-type middleware))))
+                     (some (match-type? req-type)))
+        (throw (ex-info (str (if (some (match-type? req-type) (config-key config-types))
+                               "Required middleware is in wrong position: "
+                               "Missing required middleware: ")
+                             {:middleware (middleware-type middleware)
+                              :requires req-type})
+                        {:required-type (middleware-type middleware)
+                         :required-config (required-config middleware)
+                         :middleware middleware
+                         :missing req-type}))))))
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
@@ -89,31 +110,6 @@
        (handler request
                 (fn [resp] (respond (response-fn resp request)))
                 raise)))))
-
-(defn- validate-required
-  [{:keys [ignore-required] :as config}]
-  (let [config-types (-> (select-keys config [:outer :enter :leave :inner])
-                         (update-vals (partial map middleware-type)))
-        ignore (set ignore-required)]
-    (doseq [[_ group-middlewares], config
-            middleware,,,,,,,,,,,, group-middlewares
-            [config-key req-types] (require-config middleware)
-            req-type,,,,,,,,,,,,,, req-types
-            :when (not (ignore req-type))]
-      (when-not (->> (config-key config-types)
-                     (take-while (complement (partial = (middleware-type middleware))))
-                     (some (partial = req-type)))
-        (throw (ex-info (str (if (some (partial = req-type) (config-key config-types))
-                               "Required middleware is in wrong position: "
-                               "Missing required middleware: ")
-                             {:middleware (middleware-type middleware)
-                              :requires req-type})
-                        {:middleware-type (middleware-type middleware)
-                         :require-config (require-config middleware)
-                         :middleware middleware
-                         :missing req-type}))))))
-
-;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
 (defn wrap-handler
   "Returns ring handler wrapped by middlewares in configuration map:

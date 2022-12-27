@@ -121,7 +121,7 @@
 ;; - Compose middlewares with dependencies
 
 ;; Requires to :enter ::wrap-request-1 before ::wrap-request-2
-(.addMethod ^MultiFn stack/require-config ::wrap-request-2
+(.addMethod ^MultiFn stack/required-config ::wrap-request-2
             (constantly {:enter [::wrap-request-1]}))
 
 (comment
