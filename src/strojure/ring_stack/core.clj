@@ -5,7 +5,7 @@
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
-(defn middleware-type
+(defn object-type
   "Returns dispatch value for middleware object.
 
   - for keyword or symbol returns it
@@ -19,75 +19,131 @@
       (:type obj)
       (class obj)))
 
-(defmulti as-handler-wrap
-  "Coerce object to Ring handler wrapper."
-  {:arglists '([obj])}
-  middleware-type)
-
-(defmulti as-request-wrap
-  "Coerce object to Ring request wrapper, the function
-  `(fn [request] new-request)`."
-  {:arglists '([obj])}
-  middleware-type)
-
-(defmulti as-response-wrap
-  "Coerce object to Ring response wrapper, the function
-  `(fn [response request] new-response)`."
-  {:arglists '([obj])}
-  middleware-type)
+(defn derive-object-type
+  "Establishes a parent/child relationship between parent and object. Parent
+  must be a namespace-qualified symbol or keyword."
+  [parent object]
+  (derive (object-type object) parent))
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+
+(defmulti as-handler-fn
+  "Returns Ring middleware `(fn [handler] new-handler)` for the object."
+  {:arglists '([obj])}
+  object-type)
+
+(defmulti as-request-fn
+  "Returns function `(fn [request] new-request)` for the object."
+  {:arglists '([obj])}
+  object-type)
+
+(defmulti as-response-fn
+  "Returns function `(fn [response request] new-response)` for the object."
+  {:arglists '([obj])}
+  object-type)
 
 (defmulti required-config
   "Returns configuration `{:keys [outer enter leave inner]}` where every key
   contains sequence of middleware types to be presented in configuration before
   the middleware."
   {:arglists '([obj])}
-  middleware-type)
+  object-type)
 
 ;; No middleware dependencies by default.
 (.addMethod ^MultiFn required-config :default (constantly nil))
 
-(defn- match-type?
-  [parent]
-  (fn [child] (isa? child parent)))
+;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+
+(defn- set-method
+  {:arglists '([mf type-sym method]
+               [mf type-sym method {:keys [type-aliases required-config]}])}
+  ([mf type-sym method] (set-method mf method type-sym nil))
+  ([mf type-sym method options]
+   (.addMethod ^MultiFn mf type-sym method)
+   ;; Derive type aliases from the type.
+   (run! (partial derive-object-type type-sym)
+         (:type-aliases options))
+   ;; Add method for `required-config`.
+   (some->> (:required-config options)
+            (constantly)
+            (.addMethod ^MultiFn required-config type-sym))))
+
+(def ^{:arglists '([type-sym f]
+                   [type-sym f {:keys [type-aliases required-config]}])}
+  set-as-handler-fn
+  "Associates function `f` (returning `(fn [handler] new-handler)`) with type
+  symbol.
+
+  Options:
+
+  - `:type-aliases`    - the sequence of symbols to derive from `type-symbol`.
+  - `:required-config` - the middleware configuration to validate for the type.
+  "
+  (partial set-method as-handler-fn))
+
+(def ^{:arglists '([type-sym f]
+                   [type-sym f {:keys [type-aliases required-config]}])}
+  set-as-request-fn
+  "Associates function `f` (returning `(fn [request] new-request)`) with type
+  symbol.
+
+  Options:
+
+  - `:type-aliases`    - the sequence of symbols to derive from `type-symbol`.
+  - `:required-config` - the middleware configuration to validate for the type.
+  "
+  (partial set-method as-request-fn))
+
+(def ^{:arglists '([type-sym f]
+                   [type-sym f {:keys [type-aliases required-config]}])}
+  set-as-response-fn
+  "Associates function `f` (returning `(fn [response request] new-response)`)
+  with type symbol.
+
+  Options:
+
+  - `:type-aliases`    - the sequence of symbols to derive from `type-symbol`.
+  - `:required-config` - the middleware configuration to validate for the type.
+  "
+  (partial set-method as-response-fn))
+
+;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
 (defn- validate-required
   [{:keys [ignore-required] :as config}]
   (let [config-types (-> (select-keys config [:outer :enter :leave :inner])
-                         (update-vals (partial map middleware-type)))
-        ignore (set ignore-required)]
+                         (update-vals (partial map object-type)))
+        ignore (set ignore-required)
+        match-type (fn [parent] (fn [child] (isa? child parent)))]
     (doseq [[_ group-middlewares], config
             middleware,,,,,,,,,,,, group-middlewares
             [config-key req-types] (required-config middleware)
             req-type,,,,,,,,,,,,,, req-types
             :when (not (ignore req-type))]
       (when-not (->> (config-key config-types)
-                     (take-while (complement (match-type? (middleware-type middleware))))
-                     (some (match-type? req-type)))
-        (throw (ex-info (str (if (some (match-type? req-type) (config-key config-types))
+                     (take-while (complement (match-type (object-type middleware))))
+                     (some (match-type req-type)))
+        (throw (ex-info (str (if (some (match-type req-type) (config-key config-types))
                                "Required middleware is in wrong position: "
                                "Missing required middleware: ")
-                             {:middleware (middleware-type middleware)
+                             {:middleware (object-type middleware)
                               :requires req-type})
-                        {:required-type (middleware-type middleware)
+                        {:required-type (object-type middleware)
                          :required-config (required-config middleware)
                          :middleware middleware
                          :missing req-type}))))))
 
-;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
-
-(defn- apply-handler-wraps
-  [handler fns]
-  (->> (reverse fns)
-       (map as-handler-wrap)
-       (reduce (fn [handler wrapper] (wrapper handler))
+(defn- apply-handler-fs
+  [handler fs]
+  (->> (reverse fs)
+       (map as-handler-fn)
+       (reduce (fn [handler wrap-fn] (wrap-fn handler))
                handler)))
 
-(defn- apply-request-wraps
-  [handler fns]
-  (let [request-fn (->> (reverse fns)
-                        (map as-request-wrap)
+(defn- apply-request-fs
+  [handler fs]
+  (let [request-fn (->> (reverse fs)
+                        (map as-request-fn)
                         (reduce (fn [f ff] (fn [request]
                                              (f (ff request))))))]
     (fn
@@ -96,10 +152,10 @@
       ([request respond raise]
        (handler (request-fn request) respond raise)))))
 
-(defn- apply-response-wraps
-  [handler fns]
-  (let [response-fn (->> (reverse fns)
-                         (map as-response-wrap)
+(defn- apply-response-fs
+  [handler fs]
+  (let [response-fn (->> (reverse fs)
+                         (map as-response-fn)
                          (reduce (fn [f ff]
                                    (fn [response request]
                                      (f (ff response request) request)))))]
@@ -130,9 +186,9 @@
   Configuration groups are applied as they are listed above:
 
   - Request flow:
-      - `:outer` -> `:enter` -> `:inner` -> handler.
+      - `:outer` −> `:enter` −> `:inner` −> handler.
   - Response flow:
-      - handler -> `:inner` -> `:leave` -> `:outer`.
+      - handler −> `:inner` −> `:leave` −> `:outer`.
 
   Such configuration allows to distinguish between request/response handlers,
   control order of wrappers more easy and naturally comparing with usage of
@@ -169,9 +225,9 @@
   [handler {:keys [outer enter leave inner] :as config}]
   (validate-required config)
   (cond-> handler
-    (seq inner) (apply-handler-wraps inner)
-    (seq leave) (apply-response-wraps leave)
-    (seq enter) (apply-request-wraps enter)
-    (seq outer) (apply-handler-wraps outer)))
+    (seq inner) (apply-handler-fs inner)
+    (seq leave) (apply-response-fs leave)
+    (seq enter) (apply-request-fs enter)
+    (seq outer) (apply-handler-fs outer)))
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,

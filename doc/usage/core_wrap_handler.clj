@@ -99,14 +99,14 @@
 ;; - Compose registered handler types
 
 ;; Assign middleware types to our middlewares
-(.addMethod ^MultiFn stack/as-handler-wrap ::wrap-outer-1 (constantly wrap-outer-1))
-(.addMethod ^MultiFn stack/as-handler-wrap ::wrap-outer-2 (constantly wrap-outer-2))
-(.addMethod ^MultiFn stack/as-handler-wrap ::wrap-inner-1 (constantly wrap-inner-1))
-(.addMethod ^MultiFn stack/as-handler-wrap ::wrap-inner-2 (constantly wrap-inner-2))
-(.addMethod ^MultiFn stack/as-request-wrap ::wrap-request-1 (constantly wrap-request-1))
-(.addMethod ^MultiFn stack/as-request-wrap ::wrap-request-2 (constantly wrap-request-2))
-(.addMethod ^MultiFn stack/as-response-wrap ::wrap-response-1 (constantly wrap-response-1))
-(.addMethod ^MultiFn stack/as-response-wrap ::wrap-response-2 (constantly wrap-response-2))
+(.addMethod ^MultiFn stack/as-handler-fn ::wrap-outer-1 (constantly wrap-outer-1))
+(.addMethod ^MultiFn stack/as-handler-fn ::wrap-outer-2 (constantly wrap-outer-2))
+(.addMethod ^MultiFn stack/as-handler-fn ::wrap-inner-1 (constantly wrap-inner-1))
+(.addMethod ^MultiFn stack/as-handler-fn ::wrap-inner-2 (constantly wrap-inner-2))
+(.addMethod ^MultiFn stack/as-request-fn ::wrap-request-1 (constantly wrap-request-1))
+(.addMethod ^MultiFn stack/as-request-fn ::wrap-request-2 (constantly wrap-request-2))
+(.addMethod ^MultiFn stack/as-response-fn ::wrap-response-1 (constantly wrap-response-1))
+(.addMethod ^MultiFn stack/as-response-fn ::wrap-response-2 (constantly wrap-response-2))
 
 (let [handler (stack/wrap-handler handler* {:outer [::wrap-outer-1
                                                     ::wrap-outer-2]

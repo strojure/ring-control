@@ -42,9 +42,9 @@ Wrapper are applying in direct order:
 Configuration groups are applied as they are listed above:
 
 - Request flow:
-    - `:outer` → `:enter` → `:inner` → handler.
+    - `:outer` −> `:enter` −> `:inner` −> handler.
 - Response flow:
-    - handler → `:inner` → `:leave` → `:outer`.
+    - handler −> `:inner` −> `:leave` −> `:outer`.
 
 Such configuration allows to distinguish between request/response handlers,
 control order of wrappers more easy and naturally comparing with usage of

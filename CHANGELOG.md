@@ -11,6 +11,9 @@ Release date `UNRELEASED`
 - Rename `require-config` to `required-config`.
 - Don't use function without `:type` meta as middleware.
 - Allow symbols as middleware type.
+- Rename `middleware-type` to `object-type`.
+- Rename `as-*` multimethods.
+- Add setter functions for middleware multimethods.
 - Add ring core middleware adapters (WIP)
 
 ## `1.0.3-beta1`

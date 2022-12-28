@@ -4,39 +4,39 @@
   (:require [ring.middleware.content-type :as content-type]
             [ring.middleware.keyword-params :as keyword-params]
             [ring.middleware.params :as params]
-            [strojure.ring-stack.core :as stack])
-  (:import (clojure.lang MultiFn)))
+            [strojure.ring-stack.core :as stack]))
 
 (set! *warn-on-reflection* true)
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
-(defn as-wrap-with-options
-  "Returns function to use `wrapper-fn` as wrapper multimethod with optional
-  `options` argument, which can accept maps and pass it as `option`."
-  [wrapper-fn]
-  (fn [this]
-    (if (map? this) (wrapper-fn this)
-                    (wrapper-fn))))
+(defn as-with-options
+  "Returns middleware method function to use `as-fn` as multimethod with
+  optional `options` argument, which can accept maps and pass it as `option` in
+  `as-fn`."
+  [as-fn]
+  (fn [obj]
+    (if (map? obj) (as-fn obj)
+                   (as-fn))))
 
-(defn request-wrap-fn
-  "Returns wrapper to be used in `:enter`."
-  [request-fn type-symbol]
-  (fn request-wrapper*
-    ([] (request-wrapper* {}))
+(defn as-request-fn
+  "Returns `(fn [request] new-request)` to be used in `:enter`."
+  [ring-request-fn, type-symbol]
+  (fn as-request-fn*
+    ([] (as-request-fn* {}))
     ([options]
      (-> (fn [request]
-           (request-fn request options))
+           (ring-request-fn request options))
          (with-meta {:type type-symbol})))))
 
-(defn response-wrap-fn
-  "Returns wrapper to be used in `:leave`."
-  [response-fn type-symbol]
-  (fn response-wrapper*
-    ([] (response-wrapper* {}))
+(defn as-response-fn
+  "Returns `(fn [response request] new-response)` to be used in `:leave`."
+  [ring-response-fn, type-symbol]
+  (fn as-response-fn*
+    ([] (as-response-fn* {}))
     ([options]
      (-> (fn [response request]
-           (response-fn response request options))
+           (ring-response-fn response request options))
          (with-meta {:type type-symbol})))))
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
@@ -57,12 +57,10 @@
                   the request character encoding, or \"UTF-8\" if no request
                   character encoding is set.
   "
-  (request-wrap-fn params/params-request `request-params))
+  (as-request-fn params/params-request `request-params))
 
-(.addMethod ^MultiFn stack/as-request-wrap `request-params
-            (as-wrap-with-options request-params))
-
-(derive ::request-params `request-params)
+(stack/set-as-request-fn `request-params (as-with-options request-params)
+                         {:type-aliases [request-params ::request-params]})
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
@@ -79,14 +77,11 @@
   - `:parse-namespaces?` - if true, parse the parameters into namespaced
                            keywords (defaults to false)
   "
-  (request-wrap-fn keyword-params/keyword-params-request `request-keyword-params))
+  (as-request-fn keyword-params/keyword-params-request `request-keyword-params))
 
-(.addMethod ^MultiFn stack/as-request-wrap `request-keyword-params
-            (as-wrap-with-options request-keyword-params))
-
-(derive ::request-keyword-params `request-keyword-params)
-
-(defmethod stack/required-config `request-keyword-params [_] {:enter [`request-params]})
+(stack/set-as-request-fn `request-keyword-params (as-with-options request-keyword-params)
+                         {:type-aliases [request-keyword-params ::request-keyword-params]
+                          :required-config {:enter [`request-params]}})
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
@@ -103,10 +98,10 @@
                     used in addition to the ones defined in
                     `ring.util.mime-type/default-mime-types`
   "
-  (response-wrap-fn content-type/content-type-response `response-content-type))
+  (as-response-fn content-type/content-type-response `response-content-type))
 
-(.addMethod ^MultiFn stack/as-response-wrap `response-content-type
-            (as-wrap-with-options response-content-type))
+(stack/set-as-response-fn `response-content-type (as-with-options response-content-type)
+                          {:type-aliases [response-content-type ::response-content-type]})
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
