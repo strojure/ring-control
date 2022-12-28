@@ -1,62 +1,77 @@
 (ns usage.core-wrap-handler
-  (:require [strojure.ring-stack.core :as stack])
-  (:import (clojure.lang MultiFn)))
+  (:require [strojure.ring-stack.core :as stack]))
 
 ;; ## Define middleware functions
 
 ;; - Define standard ring handlers
 
-(defn- wrap-outer-1 [handler]
+(defn- wrap1 [handler]
   (fn [request]
-    (println 'wrap-outer-1 request)
-    (doto (-> (update request :trace/request conj 'wrap-outer-1)
+    (println 'wrap1 request)
+    (doto (-> (update request :trace/request conj 'wrap1)
               (handler)
-              (update :trace/response conj 'wrap-outer-1))
-      (->> (println 'wrap-outer-1)))))
+              (update :trace/response conj 'wrap1))
+      (->> (println 'wrap1)))))
 
-(defn- wrap-outer-2 [handler]
+(defn- wrap2 [handler]
   (fn [request]
-    (println 'wrap-outer-2 request)
-    (doto (-> (update request :trace/request conj 'wrap-outer-2)
+    (println 'wrap2 request)
+    (doto (-> (update request :trace/request conj 'wrap2)
               (handler)
-              (update :trace/response conj 'wrap-outer-2))
-      (->> (println 'wrap-outer-2)))))
+              (update :trace/response conj 'wrap2))
+      (->> (println 'wrap2)))))
 
-(defn- wrap-inner-1 [handler]
-  (fn [request]
-    (println 'wrap-inner-1 request)
-    (doto (-> (update request :trace/request conj 'wrap-inner-1)
-              (handler)
-              (update :trace/response conj 'wrap-inner-1))
-      (->> (println 'wrap-inner-1)))))
+(stack/set-as-handler-fn `wrap2 (constantly wrap2))
 
-(defn- wrap-inner-2 [handler]
+(defn- wrap3 [handler]
   (fn [request]
-    (println 'wrap-inner-2 request)
-    (doto (-> (update request :trace/request conj 'wrap-inner-2)
+    (println 'wrap3 request)
+    (doto (-> (update request :trace/request conj 'wrap3)
               (handler)
-              (update :trace/response conj 'wrap-inner-2))
-      (->> (println 'wrap-inner-2)))))
+              (update :trace/response conj 'wrap3))
+      (->> (println 'wrap3)))))
+
+(defn- wrap4 [handler]
+  (fn [request]
+    (println 'wrap4 request)
+    (doto (-> (update request :trace/request conj 'wrap4)
+              (handler)
+              (update :trace/response conj 'wrap4))
+      (->> (println 'wrap4)))))
+
+;; Register functions to be used in configuration.
+(stack/set-as-handler-fn `wrap1 (constantly wrap1) {:type-aliases [wrap1 ::wrap1]})
+(stack/set-as-handler-fn `wrap2 (constantly wrap2) {:type-aliases [wrap2 ::wrap2]})
+(stack/set-as-handler-fn `wrap3 (constantly wrap3) {:type-aliases [wrap3 ::wrap3]})
+(stack/set-as-handler-fn `wrap4 (constantly wrap4) {:type-aliases [wrap4 ::wrap4]})
 
 ;; - Define ring request wrappers
 
-(defn- wrap-request-1 [request]
-  (println 'wrap-request-1 request)
-  (update request :trace/request conj 'wrap-request-1))
+(defn- request1 [request]
+  (println 'request1 request)
+  (update request :trace/request conj 'request1))
 
-(defn- wrap-request-2 [request]
-  (println 'wrap-request-2 request)
-  (update request :trace/request conj 'wrap-request-2))
+(defn- request2 [request]
+  (println 'request2 request)
+  (update request :trace/request conj 'request2))
+
+;; Register functions to be used in configuration.
+(stack/set-as-request-fn `request1 (constantly request1) {:type-aliases [request1 ::request1]})
+(stack/set-as-request-fn `request2 (constantly request2) {:type-aliases [request2 ::request2]})
 
 ;; - Define ring response wrappers
 
-(defn- wrap-response-1 [response request]
-  (println 'wrap-response-1 response request)
-  (update response :trace/response conj 'wrap-response-1))
+(defn- response1 [response request]
+  (println 'response1 response request)
+  (update response :trace/response conj 'response1))
 
-(defn- wrap-response-2 [response request]
-  (println 'wrap-response-2 response request)
-  (update response :trace/response conj 'wrap-response-2))
+(defn- response2 [response request]
+  (println 'response2 response request)
+  (update response :trace/response conj 'response2))
+
+;; Register functions to be used in configuration.
+(stack/set-as-response-fn `response1 (constantly response1) {:type-aliases [response1 ::response1]})
+(stack/set-as-response-fn `response2 (constantly response2) {:type-aliases [response2 ::response2]})
 
 ;; ## Define handler function to be wrapped
 
@@ -69,88 +84,69 @@
 
 ;; - Compose handler functions
 
-(let [handler (stack/wrap-handler handler* {:outer [wrap-outer-1
-                                                    wrap-outer-2]
-                                            :enter [wrap-request-1
-                                                    wrap-request-2]
-                                            :leave [wrap-response-1
-                                                    wrap-response-2]
-                                            :inner [wrap-inner-1
-                                                    wrap-inner-2]})]
+(let [handler (stack/wrap-handler handler* {:outer [wrap1 wrap2]
+                                            :enter [request1 request2]
+                                            :leave [response1 response2]
+                                            :inner [wrap3 wrap4]})]
   (handler {:trace/request []}))
 
-;wrap-outer-1 #:trace{:request []}
-;wrap-outer-2 #:trace{:request [wrap-outer-1]}
-;wrap-request-1 #:trace{:request [wrap-outer-1 wrap-outer-2]}
-;wrap-request-2 #:trace{:request [wrap-outer-1 wrap-outer-2 wrap-request-1]}
-;wrap-inner-1 #:trace{:request [wrap-outer-1 wrap-outer-2 wrap-request-1 wrap-request-2]}
-;wrap-inner-2 #:trace{:request [wrap-outer-1 wrap-outer-2 wrap-request-1 wrap-request-2 wrap-inner-1]}
-;handler* #:trace{:request [wrap-outer-1 wrap-outer-2 wrap-request-1 wrap-request-2 wrap-inner-1 wrap-inner-2]}
-;wrap-inner-2 #:trace{:request [wrap-outer-1 wrap-outer-2 wrap-request-1 wrap-request-2 wrap-inner-1 wrap-inner-2], :response [wrap-inner-2]}
-;wrap-inner-1 #:trace{:request [wrap-outer-1 wrap-outer-2 wrap-request-1 wrap-request-2 wrap-inner-1 wrap-inner-2], :response [wrap-inner-2 wrap-inner-1]}
-;wrap-response-1 #:trace{:request [wrap-outer-1 wrap-outer-2 wrap-request-1 wrap-request-2 wrap-inner-1 wrap-inner-2], :response [wrap-inner-2 wrap-inner-1]} #:trace{:request [wrap-outer-1 wrap-outer-2 wrap-request-1 wrap-request-2]}
-;wrap-response-2 #:trace{:request [wrap-outer-1 wrap-outer-2 wrap-request-1 wrap-request-2 wrap-inner-1 wrap-inner-2], :response [wrap-inner-2 wrap-inner-1 wrap-response-1]} #:trace{:request [wrap-outer-1 wrap-outer-2 wrap-request-1 wrap-request-2]}
-;wrap-outer-2 #:trace{:request [wrap-outer-1 wrap-outer-2 wrap-request-1 wrap-request-2 wrap-inner-1 wrap-inner-2], :response [wrap-inner-2 wrap-inner-1 wrap-response-1 wrap-response-2 wrap-outer-2]}
-;wrap-outer-1 #:trace{:request [wrap-outer-1 wrap-outer-2 wrap-request-1 wrap-request-2 wrap-inner-1 wrap-inner-2], :response [wrap-inner-2 wrap-inner-1 wrap-response-1 wrap-response-2 wrap-outer-2 wrap-outer-1]}
+;wrap1 #:trace{:request []}
+;wrap2 #:trace{:request [wrap1]}
+;request1 #:trace{:request [wrap1 wrap2]}
+;request2 #:trace{:request [wrap1 wrap2 request1]}
+;wrap3 #:trace{:request [wrap1 wrap2 request1 request2]}
+;wrap4 #:trace{:request [wrap1 wrap2 request1 request2 wrap3]}
+;handler* #:trace{:request [wrap1 wrap2 request1 request2 wrap3 wrap4]}
+;wrap4 #:trace{:request [wrap1 wrap2 request1 request2 wrap3 wrap4], :response [wrap4]}
+;wrap3 #:trace{:request [wrap1 wrap2 request1 request2 wrap3 wrap4], :response [wrap4 wrap3]}
+;response1 #:trace{:request [wrap1 wrap2 request1 request2 wrap3 wrap4], :response [wrap4 wrap3]} #:trace{:request [wrap1 wrap2 request1 request2]}
+;response2 #:trace{:request [wrap1 wrap2 request1 request2 wrap3 wrap4], :response [wrap4 wrap3 response1]} #:trace{:request [wrap1 wrap2 request1 request2]}
+;wrap2 #:trace{:request [wrap1 wrap2 request1 request2 wrap3 wrap4], :response [wrap4 wrap3 response1 response2 wrap2]}
+;wrap1 #:trace{:request [wrap1 wrap2 request1 request2 wrap3 wrap4], :response [wrap4 wrap3 response1 response2 wrap2 wrap1]}
 
-#_#:trace{:request [wrap-outer-1 wrap-outer-2 wrap-request-1 wrap-request-2 wrap-inner-1 wrap-inner-2],
-          :response [wrap-inner-2 wrap-inner-1 wrap-response-1 wrap-response-2 wrap-outer-2 wrap-outer-1]}
+#_#:trace{:request [wrap1 wrap2 request1 request2 wrap3 wrap4],
+          :response [wrap4 wrap3 response1 response2 wrap2 wrap1]}
 
-;; - Compose registered handler types
+;; - Compose handler types (symbols)
 
-;; Assign middleware types to our middlewares
-(.addMethod ^MultiFn stack/as-handler-fn ::wrap-outer-1 (constantly wrap-outer-1))
-(.addMethod ^MultiFn stack/as-handler-fn ::wrap-outer-2 (constantly wrap-outer-2))
-(.addMethod ^MultiFn stack/as-handler-fn ::wrap-inner-1 (constantly wrap-inner-1))
-(.addMethod ^MultiFn stack/as-handler-fn ::wrap-inner-2 (constantly wrap-inner-2))
-(.addMethod ^MultiFn stack/as-request-fn ::wrap-request-1 (constantly wrap-request-1))
-(.addMethod ^MultiFn stack/as-request-fn ::wrap-request-2 (constantly wrap-request-2))
-(.addMethod ^MultiFn stack/as-response-fn ::wrap-response-1 (constantly wrap-response-1))
-(.addMethod ^MultiFn stack/as-response-fn ::wrap-response-2 (constantly wrap-response-2))
-
-(let [handler (stack/wrap-handler handler* {:outer [::wrap-outer-1
-                                                    ::wrap-outer-2]
-                                            :enter [::wrap-request-1
-                                                    ::wrap-request-2]
-                                            :leave [::wrap-response-1
-                                                    ::wrap-response-2]
-                                            :inner [::wrap-inner-1
-                                                    ::wrap-inner-2]})]
+(let [handler (stack/wrap-handler handler* {:outer [`wrap1 `wrap2]
+                                            :enter [`request1 `request2]
+                                            :leave [`response1 `response2]
+                                            :inner [`wrap3 `wrap4]})]
   (handler {:trace/request []}))
 
-;; - Compose middlewares with dependencies
+;; - Compose handler types (keywords)
 
-;; Requires to :enter ::wrap-request-1 before ::wrap-request-2
-(.addMethod ^MultiFn stack/required-config ::wrap-request-2
-            (constantly {:enter [::wrap-request-1]}))
+(let [handler (stack/wrap-handler handler* {:outer [::wrap1 ::wrap2]
+                                            :enter [::request1 ::request2]
+                                            :leave [::response1 ::response2]
+                                            :inner [::wrap3 ::wrap4]})]
+  (handler {:trace/request []}))
+
+;; - Middleware with dependency
+
+;; Requires to :enter `request1` before `request2`
+(stack/set-required-config `request2 {:enter [`request1]})
 
 (comment
   ;; Missing required middleware
-  (let [handler (stack/wrap-handler handler* {:enter [::wrap-request-2]})]
+  (let [handler (stack/wrap-handler handler* {:enter [request2]})]
     (handler {:trace/request []}))
   ;clojure.lang.ExceptionInfo:
-  ; Missing required middleware: {:middleware :usage.core/wrap-request-2, :requires :usage.core/wrap-request-1}
-  ; {:middleware-type :usage.core/wrap-request-2,
-  ;  :require-config {:enter [:usage.core/wrap-request-1]},
-  ;  :middleware :usage.core/wrap-request-2,
-  ;  :missing :usage.core/wrap-request-1}
+  ; Missing required middleware: {:middleware usage.core_wrap_handler$request2, :requires usage.core-wrap-handler/request1} {:middleware usage.core_wrap_handler$request2, :required-config {:enter [usage.core-wrap-handler/request1]}, :missing usage.core-wrap-handler/request1}
 
-  ;; Required middleware is in wrong position
-  (let [handler (stack/wrap-handler handler* {:enter [::wrap-request-2
-                                                      ::wrap-request-1]})]
+  ;; Required middleware in wrong position
+  (let [handler (stack/wrap-handler handler* {:enter [request2
+                                                      request1]})]
     (handler {:trace/request []}))
   ;clojure.lang.ExceptionInfo:
-  ; Required middleware is in wrong position: {:middleware :usage.core/wrap-request-2, :requires :usage.core/wrap-request-1}
-  ; {:middleware-type :usage.core/wrap-request-2,
-  ;  :require-config {:enter [:usage.core/wrap-request-1]},
-  ;  :middleware :usage.core/wrap-request-2,
-  ;  :missing :usage.core/wrap-request-1}
+  ; Required middleware in wrong position: {:middleware usage.core_wrap_handler$request2, :requires usage.core-wrap-handler/request1} {:middleware usage.core_wrap_handler$request2, :required-config {:enter [usage.core-wrap-handler/request1]}, :missing usage.core-wrap-handler/request1}
 
   ;; Ignore dependency error
-  (let [handler (stack/wrap-handler handler* {:enter [::wrap-request-2]
-                                              :ignore-required #{::wrap-request-1}})]
+  (let [handler (stack/wrap-handler handler* {:enter [request2]
+                                              :ignore-required #{request1}})]
     (handler {:trace/request []}))
-  ;wrap-request-2 #:trace{:request []}
-  ;handler* #:trace{:request [wrap-request-2]}
-  ;=> #:trace{:request [wrap-request-2], :response []}
+  ;request2 #:trace{:request []}
+  ;handler* #:trace{:request [request2]}
+  ;=> #:trace{:request [request2], :response []}
   )

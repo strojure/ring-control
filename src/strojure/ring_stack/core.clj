@@ -61,6 +61,11 @@
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
+(defn set-required-config
+  "Assigns required config for type symbol."
+  [type-sym config]
+  (.addMethod ^MultiFn required-config type-sym (constantly config)))
+
 (defn- set-method
   {:arglists '([mf type-sym method]
                [mf type-sym method {:keys [type-aliases required-config]}])}
@@ -72,8 +77,7 @@
          (:type-aliases options))
    ;; Add method for `required-config`.
    (some->> (:required-config options)
-            (constantly)
-            (.addMethod ^MultiFn required-config type-sym))))
+            (set-required-config type-sym))))
 
 (def ^{:arglists '([type-sym f]
                    [type-sym f {:keys [type-aliases required-config]}])}
@@ -120,24 +124,23 @@
   [{:keys [ignore-required] :as config}]
   (let [config-types (-> (select-keys config [:outer :enter :leave :inner])
                          (update-vals (partial map object-type)))
-        ignore (set ignore-required)
+        ignore-required (map object-type ignore-required)
         match-type (fn [parent] (fn [child] (isa? child parent)))]
     (doseq [[_ group-middlewares], config
             middleware,,,,,,,,,,,, group-middlewares
             [config-key req-types] (required-config middleware)
             req-type,,,,,,,,,,,,,, req-types
-            :when (not (ignore req-type))]
+            :when (not (some (match-type req-type) ignore-required))]
       (when-not (->> (config-key config-types)
                      (take-while (complement (match-type (object-type middleware))))
                      (some (match-type req-type)))
         (throw (ex-info (str (if (some (match-type req-type) (config-key config-types))
-                               "Required middleware is in wrong position: "
+                               "Required middleware in wrong position: "
                                "Missing required middleware: ")
                              {:middleware (object-type middleware)
                               :requires req-type})
-                        {:required-type (object-type middleware)
+                        {:middleware (object-type middleware)
                          :required-config (required-config middleware)
-                         :middleware middleware
                          :missing req-type}))))))
 
 (defn- apply-handler-fs
