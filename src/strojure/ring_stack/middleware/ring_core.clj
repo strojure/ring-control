@@ -26,8 +26,8 @@
                 ([] (as-request-fn* {}))
                 ([options]
                  (-> (fn [request] (ring-request-fn request options))
-                     (with-meta {:type type-symbol}))))
-              (with-meta {:type type-symbol}))]
+                     (stack/with-object-type type-symbol))))
+              (stack/with-object-type type-symbol))]
     (stack/set-as-request-fn type-symbol (as-with-options f) set-as-request-opts)
     f))
 
@@ -38,8 +38,8 @@
                 ([] (as-response-fn* {}))
                 ([options]
                  (-> (fn [response request] (ring-response-fn response request options))
-                     (with-meta {:type type-symbol}))))
-              (with-meta {:type type-symbol}))]
+                     (stack/with-object-type type-symbol))))
+              (stack/with-object-type type-symbol))]
     (stack/set-as-response-fn type-symbol (as-with-options f) set-as-response-opts)
     f))
 

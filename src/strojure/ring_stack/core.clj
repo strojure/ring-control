@@ -27,6 +27,11 @@
   [parent object]
   (derive (object-type object) parent))
 
+(defn with-object-type
+  "Returns object associated with object type `t`."
+  [obj t]
+  (vary-meta obj assoc :type t))
+
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
 (defmulti as-handler-fn
