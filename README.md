@@ -18,25 +18,22 @@ middlewares:
 
 ## Usage
 
-### `wrap-handler`
-
 Ring handlers are build from handler function and middleware configuration using
-[wrap-handler] function.
+[handler_build] function.
 
-- `:outer` Standard ring middlewares to wrap around all other wrappers.
-- `:enter` Ring request wrapping functions `(fn [request] new-request)`.
-- `:leave` Ring response wrapping
-  functions `(fn [response request] new-response)`.
+- `:outer` Standard ring middlewares to wrap around all other middlewares.
+- `:enter` Ring request functions `(fn [request] new-request)`.
+- `:leave` Ring response functions `(fn [response request] new-response)`.
   The function receive same `request` as wrapping handler itself.
-- `:inner` Standard ring middlewares to wrap just around `handler` after
-  `:enter` and before `:leave`.
+- `:inner` Standard ring middlewares to wrap just `handler` after `:enter` and
+  before `:leave` middlewares.
 
-Wrapper are applying in direct order:
+Middlewares are applying in direct order:
 
 ```clojure
-;; Call `(enter1 request)` before `(enter2 request)`.
-{:enter [enter1
-         enter2]}
+;; Applies enter1 before enter2.
+{:enter [`enter1
+         `enter2]}
 ```
 
 Configuration groups are applied as they are listed above:
@@ -46,44 +43,44 @@ Configuration groups are applied as they are listed above:
 - Response flow:
     - handler −> `:inner` −> `:leave` −> `:outer`.
 
-Such configuration allows to distinguish between request/response handlers,
-control order of wrappers more easy and naturally comparing with usage of
-standard ring middlewares only.
+Such configuration allows to distinguish between request/response only
+middleware, control order of application more easy and naturally comparing with
+standard usage of ring middlewares.
 
-Wrapping functions can be defined with types using multimethods
-`as-handler-wrap`, `as-request-wrap`, `as-response-wrap` and be referred
-in configuration:
+Middleware functions should be associated with symbols (and additional
+convenient type aliases) using `middleware/set-handler-fn`,
+`middleware/set-request-fn`, `middleware/set-response-fn` functions to be
+referred in configuration:
 
 ```clojure
-{:enter [::enter1
-         ::enter2
-         {:type ::enter3 :opt1 true :opt2 false}]}
+{:enter [`enter1
+         `enter2
+         {:type `enter3 :opt1 true :opt2 false}]}
 ```
 
-Same type can be defined as request wrapper and as response wrapper. They
-should be specified in `:enter` and `:leave` independently.
+Same type symbol can be used for request and response. It is used in `:enter`
+and `:leave` independently.
 
-In this case we can also define dependency of `::enter2` on `::enter2` using
-`require-config` multimethod:
+We can also define dependency of `` `enter2 `` on `` `enter1 `` using
+`middleware/set-require-config` function:
 
 ```clojure
-(defmethod require-config ::enter2 [_]
-  {:enter [::enter1]})
+(middleware/set-require-config `enter2 {:enter [`enter1]})
 
 ;; This fails with exception about missing middleware:
-(wrap-handler handler {:enter [::enter2]})
+(handler/build handler {:enter [`enter2]})
 
 ;; This fails with exception about wrong order:
-(wrap-handler handler {:enter [::enter2 ::enter1]})
+(handler/build handler {:enter [`enter2 `enter1]})
 
 ;; But this succeeds anyway:
-(wrap-handler handler {:enter [::enter2]
-                       :ignore-required [::enter1]})
+(handler/build handler {:enter [`enter2]
+                        :ignore-required [`enter1]})
 ```
 
-See also [more sophisticated example](doc/usage/core_wrap_handler.clj).
+See also [more sophisticated example](doc/usage/walkthrough.clj).
 
 ---
 
-[wrap-handler]:
-https://cljdoc.org/d/com.github.strojure/ring-stack/CURRENT/api/strojure.ring-stack.core#wrap-handler
+[handler_build]:
+https://cljdoc.org/d/com.github.strojure/ring-stack/CURRENT/api/strojure.ring-stack.handler#build

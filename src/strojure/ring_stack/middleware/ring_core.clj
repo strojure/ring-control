@@ -1,10 +1,11 @@
 (ns strojure.ring-stack.middleware.ring-core
-  "Supplemental functions for the middlewares from the `ring.middleware`
-  namespace."
+  "Middleware configuration functions for the middlewares from the
+  `ring.middleware` namespace."
   (:require [ring.middleware.content-type :as content-type]
             [ring.middleware.keyword-params :as keyword-params]
             [ring.middleware.params :as params]
-            [strojure.ring-stack.core :as stack]))
+            [strojure.ring-stack.handler :as handler]
+            [strojure.ring-stack.middleware :as mid]))
 
 (set! *warn-on-reflection* true)
 
@@ -19,28 +20,28 @@
     (if (map? obj) (as-fn obj)
                    (as-fn))))
 
-(defn as-request-fn
-  "Returns `(fn [request] new-request)` to be used in `:enter`."
+(defn request-fn-impl
+  "Returns middleware configuration implementation for ring request function."
   [ring-request-fn, type-symbol, set-as-request-opts]
   (let [f (-> (fn as-request-fn*
                 ([] (as-request-fn* {}))
                 ([options]
                  (-> (fn [request] (ring-request-fn request options))
-                     (stack/with-object-type type-symbol))))
-              (stack/with-object-type type-symbol))]
-    (stack/set-as-request-fn type-symbol (as-with-options f) set-as-request-opts)
+                     (mid/with-type type-symbol))))
+              (mid/with-type type-symbol))]
+    (mid/set-request-fn type-symbol (as-with-options f) set-as-request-opts)
     f))
 
-(defn as-response-fn
-  "Returns `(fn [response request] new-response)` to be used in `:leave`."
+(defn response-fn-impl
+  "Returns middleware configuration implementation for ring response function."
   [ring-response-fn, type-symbol, set-as-response-opts]
   (let [f (-> (fn as-response-fn*
                 ([] (as-response-fn* {}))
                 ([options]
                  (-> (fn [response request] (ring-response-fn response request options))
-                     (stack/with-object-type type-symbol))))
-              (stack/with-object-type type-symbol))]
-    (stack/set-as-response-fn type-symbol (as-with-options f) set-as-response-opts)
+                     (mid/with-type type-symbol))))
+              (mid/with-type type-symbol))]
+    (mid/set-response-fn type-symbol (as-with-options f) set-as-response-opts)
     f))
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
@@ -61,8 +62,8 @@
                   the request character encoding, or \"UTF-8\" if no request
                   character encoding is set.
   "
-  (as-request-fn params/params-request
-                 `request-params {:type-aliases [::request-params]}))
+  (request-fn-impl params/params-request
+                   `request-params {:type-aliases [::request-params]}))
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
@@ -79,8 +80,8 @@
   - `:parse-namespaces?` - if true, parse the parameters into namespaced
                            keywords (defaults to false)
   "
-  (as-request-fn keyword-params/keyword-params-request
-                 `request-keyword-params {:type-aliases [::request-keyword-params]
+  (request-fn-impl keyword-params/keyword-params-request
+                   `request-keyword-params {:type-aliases [::request-keyword-params]
                                           :required-config {:enter [`request-params]}}))
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
@@ -98,14 +99,14 @@
                     used in addition to the ones defined in
                     `ring.util.mime-type/default-mime-types`
   "
-  (as-response-fn content-type/content-type-response
-                  `response-content-type {:type-aliases [::response-content-type]}))
+  (response-fn-impl content-type/content-type-response
+                    `response-content-type {:type-aliases [::response-content-type]}))
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
 (defn test-config [config]
   (let [handler (-> (fn [request] {:request request})
-                    (stack/wrap-handler config))]
+                    (handler/build config))]
     (handler {:uri "/" :query-string "a=1"})))
 
 (comment
@@ -120,9 +121,9 @@
                         {:type `request-keyword-params :parse-namespaces? true}]})
   (test-config {:enter [{:type ::request-params :encoding "UTF-8"}
                         {:type ::request-keyword-params :parse-namespaces? true}]})
-  (stack/object-type request-params)
-  (stack/object-type request-keyword-params)
-  (isa? (stack/object-type request-params) `request-params)
+  (mid/object-type request-params)
+  (mid/object-type request-keyword-params)
+  (isa? (mid/object-type request-params) `request-params)
   (test-config {:enter [{:type request-params :encoding "UTF-8"}
                         {:type request-keyword-params :parse-namespaces? true}]})
   )

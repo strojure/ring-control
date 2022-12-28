@@ -14,6 +14,8 @@ Release date `UNRELEASED`
 - Rename `middleware-type` to `object-type`.
 - Rename `as-*` multimethods.
 - Add setter functions for middleware multimethods.
+- Split core in handler/middleware.
+- Rename `core/wrap-handler` to `handler/build`.
 - Add ring core middleware adapters (WIP)
 
 ## `1.0.3-beta1`
