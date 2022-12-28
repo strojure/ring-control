@@ -9,14 +9,16 @@
   "Returns dispatch value for middleware object.
 
   - for keyword or symbol returns it
-  - for objects with `:type` in meta returns its value
-  - for map with `:type` returns its value
+  - for objects with `:type` in meta returns `(object-type (:type (meta obj)))`
+  - for map with `:type` returns its `(object-type (:type obj))`
+  - for class returns the class
   - otherwise returns `(class obj)`
   "
   [obj]
   (or (when (instance? Named obj) obj)
-      (some-> obj meta :type)
-      (:type obj)
+      (some-> obj meta :type object-type)
+      (some-> obj :type object-type)
+      (when (class? obj) class)
       (class obj)))
 
 (defn derive-object-type

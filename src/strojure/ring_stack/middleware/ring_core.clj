@@ -21,23 +21,27 @@
 
 (defn as-request-fn
   "Returns `(fn [request] new-request)` to be used in `:enter`."
-  [ring-request-fn, type-symbol]
-  (fn as-request-fn*
-    ([] (as-request-fn* {}))
-    ([options]
-     (-> (fn [request]
-           (ring-request-fn request options))
-         (with-meta {:type type-symbol})))))
+  [ring-request-fn, type-symbol, set-as-request-opts]
+  (let [f (-> (fn as-request-fn*
+                ([] (as-request-fn* {}))
+                ([options]
+                 (-> (fn [request] (ring-request-fn request options))
+                     (with-meta {:type type-symbol}))))
+              (with-meta {:type type-symbol}))]
+    (stack/set-as-request-fn type-symbol (as-with-options f) set-as-request-opts)
+    f))
 
 (defn as-response-fn
   "Returns `(fn [response request] new-response)` to be used in `:leave`."
-  [ring-response-fn, type-symbol]
-  (fn as-response-fn*
-    ([] (as-response-fn* {}))
-    ([options]
-     (-> (fn [response request]
-           (ring-response-fn response request options))
-         (with-meta {:type type-symbol})))))
+  [ring-response-fn, type-symbol, set-as-response-opts]
+  (let [f (-> (fn as-response-fn*
+                ([] (as-response-fn* {}))
+                ([options]
+                 (-> (fn [response request] (ring-response-fn response request options))
+                     (with-meta {:type type-symbol}))))
+              (with-meta {:type type-symbol}))]
+    (stack/set-as-response-fn type-symbol (as-with-options f) set-as-response-opts)
+    f))
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
@@ -57,10 +61,8 @@
                   the request character encoding, or \"UTF-8\" if no request
                   character encoding is set.
   "
-  (as-request-fn params/params-request `request-params))
-
-(stack/set-as-request-fn `request-params (as-with-options request-params)
-                         {:type-aliases [request-params ::request-params]})
+  (as-request-fn params/params-request
+                 `request-params {:type-aliases [::request-params]}))
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
@@ -77,11 +79,9 @@
   - `:parse-namespaces?` - if true, parse the parameters into namespaced
                            keywords (defaults to false)
   "
-  (as-request-fn keyword-params/keyword-params-request `request-keyword-params))
-
-(stack/set-as-request-fn `request-keyword-params (as-with-options request-keyword-params)
-                         {:type-aliases [request-keyword-params ::request-keyword-params]
-                          :required-config {:enter [`request-params]}})
+  (as-request-fn keyword-params/keyword-params-request
+                 `request-keyword-params {:type-aliases [::request-keyword-params]
+                                          :required-config {:enter [`request-params]}}))
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
@@ -98,20 +98,18 @@
                     used in addition to the ones defined in
                     `ring.util.mime-type/default-mime-types`
   "
-  (as-response-fn content-type/content-type-response `response-content-type))
-
-(stack/set-as-response-fn `response-content-type (as-with-options response-content-type)
-                          {:type-aliases [response-content-type ::response-content-type]})
+  (as-response-fn content-type/content-type-response
+                  `response-content-type {:type-aliases [::response-content-type]}))
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
+(defn test-config [config]
+  (let [handler (-> (fn [request] {:request request})
+                    (stack/wrap-handler config))]
+    (handler {:uri "/" :query-string "a=1"})))
+
 (comment
-
-  (defn test-config [config]
-    (let [handler (-> (fn [request] {:request request})
-                      (stack/wrap-handler config))]
-      (handler {:uri "/" :query-string "a=1"})))
-
+  (test-config {:enter [request-params]})
   (test-config {:enter [(request-params)]})
   (test-config {:enter [{:type `request-params :encoding "UTF-8"}]})
   (test-config {:enter [{:type ::request-params :encoding "UTF-8"}]})
@@ -122,6 +120,11 @@
                         {:type `request-keyword-params :parse-namespaces? true}]})
   (test-config {:enter [{:type ::request-params :encoding "UTF-8"}
                         {:type ::request-keyword-params :parse-namespaces? true}]})
+  (stack/object-type request-params)
+  (stack/object-type request-keyword-params)
+  (isa? (stack/object-type request-params) `request-params)
+  (test-config {:enter [{:type request-params :encoding "UTF-8"}
+                        {:type request-keyword-params :parse-namespaces? true}]})
   )
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
