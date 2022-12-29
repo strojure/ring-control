@@ -23,11 +23,10 @@
 (defn wrap-request-fn
   "Returns wrap method implementation for ring request function."
   [ring-request-fn, tag, as-request-opts]
-  (let [f (-> (fn wrap-request-fn*
-                ([] (wrap-request-fn* {}))
-                ([options]
-                 (-> (fn [request] (ring-request-fn request options))
-                     (config/with-type-tag tag))))
+  (let [f (-> (fn [& {:as options}]
+                (let [options (or options {})]
+                  (-> (fn [request] (ring-request-fn request options))
+                      (config/with-type-tag tag))))
               (config/with-type-tag tag))]
     (config/as-wrap-request tag (wrap-options f) as-request-opts)
     f))
@@ -35,19 +34,18 @@
 (defn wrap-response-fn
   "Returns wrap method implementation for ring response function."
   [ring-response-fn, tag, as-response-opts]
-  (let [f (-> (fn wrap-response-fn*
-                ([] (wrap-response-fn* {}))
-                ([options]
-                 (-> (fn [response request] (ring-response-fn response request options))
-                     (config/with-type-tag tag))))
+  (let [f (-> (fn [& {:as options}]
+                (let [options (or options {})]
+                  (-> (fn [response request] (ring-response-fn response request options))
+                      (config/with-type-tag tag))))
               (config/with-type-tag tag))]
     (config/as-wrap-response tag (wrap-options f) as-response-opts)
     f))
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
-(def ^{:arglists '([] [options])}
-  request-params
+(def ^{:arglists '([& {:as options}])}
+  params-request
   "Middleware to parse urlencoded parameters from the query string and form
   body (if the request is an url-encoded form). Adds the following keys to
   the request map:
@@ -63,12 +61,12 @@
                   character encoding is set.
   "
   (wrap-request-fn params/params-request
-                   `request-params {:tags [::request-params]}))
+                   `params-request {:tags [::params-request]}))
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
-(def ^{:arglists '([] [options])}
-  request-keyword-params
+(def ^{:arglists '([& {:as options}])}
+  keyword-params-request
   "Middleware that converts any string keys in the :params map to keywords.
   Only keys that can be turned into valid keywords are converted.
 
@@ -81,13 +79,13 @@
                            keywords (defaults to false)
   "
   (wrap-request-fn keyword-params/keyword-params-request
-                   `request-keyword-params {:tags [::request-keyword-params]
-                                            :requires {:enter [`request-params]}}))
+                   `keyword-params-request {:tags [::keyword-params-request]
+                                            :requires {:enter [`params-request]}}))
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
-(def ^{:arglists '([] [options])}
-  response-content-type
+(def ^{:arglists '([& {:as options}])}
+  content-type-response
   "Middleware that adds a content-type header to the response if one is not
   set by the handler. Uses the `ring.util.mime-type/ext-mime-type` function to
   guess the content-type from the file extension in the URI. If no
@@ -100,7 +98,7 @@
                     `ring.util.mime-type/default-mime-types`
   "
   (wrap-response-fn content-type/content-type-response
-                    `response-content-type {:tags [::response-content-type]}))
+                    `content-type-response {:tags [::content-type-response]}))
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
@@ -110,22 +108,22 @@
     (handler {:uri "/" :query-string "a=1"})))
 
 (comment
-  (test-config {:enter [request-params]})
-  (test-config {:enter [(request-params)]})
-  (test-config {:enter [{:type `request-params :encoding "UTF-8"}]})
-  (test-config {:enter [{:type ::request-params :encoding "UTF-8"}]})
-  (test-config {:enter [(request-params)
-                        (request-keyword-params)]
-                :leave [(response-content-type)]})
-  (test-config {:enter [{:type `request-params :encoding "UTF-8"}
-                        {:type `request-keyword-params :parse-namespaces? true}]})
-  (test-config {:enter [{:type ::request-params :encoding "UTF-8"}
-                        {:type ::request-keyword-params :parse-namespaces? true}]})
-  (config/type-tag request-params)
-  (config/type-tag request-keyword-params)
-  (isa? (config/type-tag request-params) `request-params)
-  (test-config {:enter [{:type request-params :encoding "UTF-8"}
-                        {:type request-keyword-params :parse-namespaces? true}]})
+  (test-config {:enter [params-request]})
+  (test-config {:enter [(params-request)]})
+  (test-config {:enter [{:type `params-request :encoding "UTF-8"}]})
+  (test-config {:enter [{:type ::params-request :encoding "UTF-8"}]})
+  (test-config {:enter [(params-request)
+                        (keyword-params-request)]
+                :leave [(content-type-response)]})
+  (test-config {:enter [{:type `params-request :encoding "UTF-8"}
+                        {:type `keyword-params-request :parse-namespaces? true}]})
+  (test-config {:enter [{:type ::params-request :encoding "UTF-8"}
+                        {:type ::keyword-params-request :parse-namespaces? true}]})
+  (config/type-tag params-request)
+  (config/type-tag keyword-params-request)
+  (isa? (config/type-tag params-request) `params-request)
+  (test-config {:enter [{:type params-request :encoding "UTF-8"}
+                        {:type keyword-params-request :parse-namespaces? true}]})
   )
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
