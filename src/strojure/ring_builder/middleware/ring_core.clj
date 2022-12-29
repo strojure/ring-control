@@ -1,47 +1,47 @@
-(ns strojure.ring-stack.middleware.ring-core
-  "Middleware configuration functions for the middlewares from the
+(ns strojure.ring-builder.middleware.ring-core
+  "Builder configuration functions for the middlewares from the
   `ring.middleware` namespace."
   (:require [ring.middleware.content-type :as content-type]
             [ring.middleware.keyword-params :as keyword-params]
             [ring.middleware.params :as params]
-            [strojure.ring-stack.handler :as handler]
-            [strojure.ring-stack.middleware :as mid]))
+            [strojure.ring-builder.config :as config]
+            [strojure.ring-builder.handler :as handler]))
 
 (set! *warn-on-reflection* true)
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
-(defn as-with-options
-  "Returns middleware method function to use `as-fn` as multimethod with
-  optional `options` argument, which can accept maps and pass it as `option` in
-  `as-fn`."
-  [as-fn]
+(defn wrap-options
+  "Returns wrap method function to use `wrap-fn` as multimethod with optional
+  `options` argument, which can accept maps and pass it as `option` in
+  `wrap-fn`."
+  [wrap-fn]
   (fn [obj]
-    (if (map? obj) (as-fn obj)
-                   (as-fn))))
+    (if (map? obj) (wrap-fn obj)
+                   (wrap-fn))))
 
-(defn request-fn-impl
-  "Returns middleware configuration implementation for ring request function."
-  [ring-request-fn, type-symbol, set-as-request-opts]
-  (let [f (-> (fn as-request-fn*
-                ([] (as-request-fn* {}))
+(defn wrap-request-fn
+  "Returns wrap method implementation for ring request function."
+  [ring-request-fn, tag, as-request-opts]
+  (let [f (-> (fn wrap-request-fn*
+                ([] (wrap-request-fn* {}))
                 ([options]
                  (-> (fn [request] (ring-request-fn request options))
-                     (mid/with-type type-symbol))))
-              (mid/with-type type-symbol))]
-    (mid/set-request-fn type-symbol (as-with-options f) set-as-request-opts)
+                     (config/with-type-tag tag))))
+              (config/with-type-tag tag))]
+    (config/as-wrap-request tag (wrap-options f) as-request-opts)
     f))
 
-(defn response-fn-impl
-  "Returns middleware configuration implementation for ring response function."
-  [ring-response-fn, type-symbol, set-as-response-opts]
-  (let [f (-> (fn as-response-fn*
-                ([] (as-response-fn* {}))
+(defn wrap-response-fn
+  "Returns wrap method implementation for ring response function."
+  [ring-response-fn, tag, as-response-opts]
+  (let [f (-> (fn wrap-response-fn*
+                ([] (wrap-response-fn* {}))
                 ([options]
                  (-> (fn [response request] (ring-response-fn response request options))
-                     (mid/with-type type-symbol))))
-              (mid/with-type type-symbol))]
-    (mid/set-response-fn type-symbol (as-with-options f) set-as-response-opts)
+                     (config/with-type-tag tag))))
+              (config/with-type-tag tag))]
+    (config/as-wrap-response tag (wrap-options f) as-response-opts)
     f))
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
@@ -49,21 +49,21 @@
 (def ^{:arglists '([] [options])}
   request-params
   "Middleware to parse urlencoded parameters from the query string and form
-  body (if the request is a url-encoded form). Adds the following keys to
+  body (if the request is an url-encoded form). Adds the following keys to
   the request map:
 
-  - `:query-params` - a map of parameters from the query string
-  - `:form-params`  - a map of parameters from the body
-  - `:params`       - a merged map of all types of parameter
+  - `:query-params` – a map of parameters from the query string
+  - `:form-params`  – a map of parameters from the body
+  - `:params`       – a merged map of all types of parameter
 
   Accepts the following options:
 
-  - `:encoding` - encoding to use for url-decoding. If not specified, uses
+  - `:encoding` – encoding to use for url-decoding. If not specified, uses
                   the request character encoding, or \"UTF-8\" if no request
                   character encoding is set.
   "
-  (request-fn-impl params/params-request
-                   `request-params {:type-aliases [::request-params]}))
+  (wrap-request-fn params/params-request
+                   `request-params {:tags [::request-params]}))
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
@@ -77,12 +77,12 @@
 
   Accepts the following options:
 
-  - `:parse-namespaces?` - if true, parse the parameters into namespaced
+  - `:parse-namespaces?` – if true, parse the parameters into namespaced
                            keywords (defaults to false)
   "
-  (request-fn-impl keyword-params/keyword-params-request
-                   `request-keyword-params {:type-aliases [::request-keyword-params]
-                                          :required-config {:enter [`request-params]}}))
+  (wrap-request-fn keyword-params/keyword-params-request
+                   `request-keyword-params {:tags [::request-keyword-params]
+                                            :requires {:enter [`request-params]}}))
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
@@ -95,12 +95,12 @@
 
   Accepts the following options:
 
-  - `:mime-types` - a map of filename extensions to mime-types that will be
+  - `:mime-types` – a map of filename extensions to mime-types that will be
                     used in addition to the ones defined in
                     `ring.util.mime-type/default-mime-types`
   "
-  (response-fn-impl content-type/content-type-response
-                    `response-content-type {:type-aliases [::response-content-type]}))
+  (wrap-response-fn content-type/content-type-response
+                    `response-content-type {:tags [::response-content-type]}))
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
@@ -121,9 +121,9 @@
                         {:type `request-keyword-params :parse-namespaces? true}]})
   (test-config {:enter [{:type ::request-params :encoding "UTF-8"}
                         {:type ::request-keyword-params :parse-namespaces? true}]})
-  (mid/object-type request-params)
-  (mid/object-type request-keyword-params)
-  (isa? (mid/object-type request-params) `request-params)
+  (config/type-tag request-params)
+  (config/type-tag request-keyword-params)
+  (isa? (config/type-tag request-params) `request-params)
   (test-config {:enter [{:type request-params :encoding "UTF-8"}
                         {:type request-keyword-params :parse-namespaces? true}]})
   )

@@ -1,9 +1,9 @@
-# ring-stack
+# ring-builder
 
 More controllable composition of Ring middlewares.
 
-[![cljdoc badge](https://cljdoc.org/badge/com.github.strojure/ring-stack)](https://cljdoc.org/d/com.github.strojure/ring-stack)
-[![Clojars Project](https://img.shields.io/clojars/v/com.github.strojure/ring-stack.svg)](https://clojars.org/com.github.strojure/ring-stack)
+[![cljdoc badge](https://cljdoc.org/badge/com.github.strojure/ring-builder)](https://cljdoc.org/d/com.github.strojure/ring-builder)
+[![Clojars Project](https://img.shields.io/clojars/v/com.github.strojure/ring-builder.svg)](https://clojars.org/com.github.strojure/ring-builder)
 
 ## Motivation
 
@@ -18,17 +18,21 @@ middlewares:
 
 ## Usage
 
-Ring handlers are build from handler function and middleware configuration using
-[handler_build] function.
+Ring handlers are build from handler function and builder configuration using
+[handler/build][handler_build] function.
 
-- `:outer` Standard ring middlewares to wrap around all other middlewares.
-- `:enter` Ring request functions `(fn [request] new-request)`.
-- `:leave` Ring response functions `(fn [response request] new-response)`.
-  The function receive same `request` as wrapping handler itself.
-- `:inner` Standard ring middlewares to wrap just `handler` after `:enter` and
-  before `:leave` middlewares.
+Configuration options:
 
-Middlewares are applying in direct order:
+- `:outer` – A sequence of standard ring middlewares to wrap handler before all
+  other wraps.
+- `:enter` – A sequence of Ring request functions `(fn [request] new-request)`.
+- `:leave` – A sequence of Ring response
+  functions `(fn [response request] new-response)`. The function receives
+  same `request` as wrapping handler itself.
+- `:inner` – A sequence of standard ring middlewares to wrap the `handler`
+  after `:enter` and before `:leave` wraps.
+
+The wraps are applying in direct order:
 
 ```clojure
 ;; Applies enter1 before enter2.
@@ -43,14 +47,13 @@ Configuration groups are applied as they are listed above:
 - Response flow:
     - handler −> `:inner` −> `:leave` −> `:outer`.
 
-Such configuration allows to distinguish between request/response only
-middleware, control order of application more easy and naturally comparing with
-standard usage of ring middlewares.
+Such configuration allows to distinguish between request/response only wraps,
+control order of application more easy and naturally comparing with standard
+usage of ring middlewares.
 
-Middleware functions should be associated with symbols (and additional
-convenient type aliases) using `middleware/set-handler-fn`,
-`middleware/set-request-fn`, `middleware/set-response-fn` functions to be
-referred in configuration:
+The wraps should be tagged with symbols (and optionally with convenient type
+tags) using `config/as-wrap-handler`, `config/set-request-fn`,
+`config/as-wrap-response` functions to be referred in configuration:
 
 ```clojure
 {:enter [`enter1
@@ -58,16 +61,13 @@ referred in configuration:
          {:type `enter3 :opt1 true :opt2 false}]}
 ```
 
-Same type symbol can be used for request and response. It is used in `:enter`
-and `:leave` independently.
-
 We can also define dependency of `` `enter2 `` on `` `enter1 `` using
-`middleware/set-require-config` function:
+`config/set-required` function:
 
 ```clojure
-(middleware/set-require-config `enter2 {:enter [`enter1]})
+(config/set-required `enter2 {:enter [`enter1]})
 
-;; This fails with exception about missing middleware:
+;; This fails with exception about missing dependency:
 (handler/build handler {:enter [`enter2]})
 
 ;; This fails with exception about wrong order:
@@ -83,4 +83,4 @@ See also [more sophisticated example](doc/usage/walkthrough.clj).
 ---
 
 [handler_build]:
-https://cljdoc.org/d/com.github.strojure/ring-stack/CURRENT/api/strojure.ring-stack.handler#build
+https://cljdoc.org/d/com.github.strojure/ring-builder/CURRENT/api/strojure.ring-builder.handler#build

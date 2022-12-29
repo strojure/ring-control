@@ -1,8 +1,8 @@
 (ns usage.walkthrough
-  (:require [strojure.ring-stack.handler :as handler]
-            [strojure.ring-stack.middleware :as mid]))
+  (:require [strojure.ring-builder.config :as config]
+            [strojure.ring-builder.handler :as handler]))
 
-;; ## Define middleware functions
+;; ## Define builder configuration
 
 ;; - Define standard ring handlers
 
@@ -22,7 +22,7 @@
               (update :trace/response conj 'wrap2))
       (->> (println 'wrap2)))))
 
-(mid/set-handler-fn `wrap2 (constantly wrap2))
+(config/as-wrap-handler `wrap2 (constantly wrap2))
 
 (defn- wrap3 [handler]
   (fn [request]
@@ -41,10 +41,10 @@
       (->> (println 'wrap4)))))
 
 ;; Register functions to be used in configuration.
-(mid/set-handler-fn `wrap1 (constantly wrap1) {:type-aliases [wrap1 ::wrap1]})
-(mid/set-handler-fn `wrap2 (constantly wrap2) {:type-aliases [wrap2 ::wrap2]})
-(mid/set-handler-fn `wrap3 (constantly wrap3) {:type-aliases [wrap3 ::wrap3]})
-(mid/set-handler-fn `wrap4 (constantly wrap4) {:type-aliases [wrap4 ::wrap4]})
+(config/as-wrap-handler `wrap1 (constantly wrap1) {:tags [wrap1 ::wrap1]})
+(config/as-wrap-handler `wrap2 (constantly wrap2) {:tags [wrap2 ::wrap2]})
+(config/as-wrap-handler `wrap3 (constantly wrap3) {:tags [wrap3 ::wrap3]})
+(config/as-wrap-handler `wrap4 (constantly wrap4) {:tags [wrap4 ::wrap4]})
 
 ;; - Define ring request wrappers
 
@@ -57,8 +57,8 @@
   (update request :trace/request conj 'request2))
 
 ;; Register functions to be used in configuration.
-(mid/set-request-fn `request1 (constantly request1) {:type-aliases [request1 ::request1]})
-(mid/set-request-fn `request2 (constantly request2) {:type-aliases [request2 ::request2]})
+(config/as-wrap-request `request1 (constantly request1) {:tags [request1 ::request1]})
+(config/as-wrap-request `request2 (constantly request2) {:tags [request2 ::request2]})
 
 ;; - Define ring response wrappers
 
@@ -71,8 +71,8 @@
   (update response :trace/response conj 'response2))
 
 ;; Register functions to be used in configuration.
-(mid/set-response-fn `response1 (constantly response1) {:type-aliases [response1 ::response1]})
-(mid/set-response-fn `response2 (constantly response2) {:type-aliases [response2 ::response2]})
+(config/as-wrap-response `response1 (constantly response1) {:tags [response1 ::response1]})
+(config/as-wrap-response `response2 (constantly response2) {:tags [response2 ::response2]})
 
 ;; ## Define handler function to be wrapped
 
@@ -124,28 +124,34 @@
                                        :inner [::wrap3 ::wrap4]})]
   (handler {:trace/request []}))
 
-;; - Middleware with dependency
+;; - Configuration with dependency
 
 ;; Requires to :enter `request1` before `request2`
-(mid/set-required-config `request2 {:enter [`request1]})
+(config/set-required `request2 {:enter [`request1]})
 
 (comment
-  ;; Missing required middleware
-  (let [handler (mid/wrap-handler handler* {:enter [request2]})]
+  ;; Missing required
+  (let [handler (handler/build handler* {:enter [request2]})]
     (handler {:trace/request []}))
   ;clojure.lang.ExceptionInfo:
-  ; Missing required middleware: {:middleware usage.core_wrap_handler$request2, :requires usage.core-wrap-handler/request1} {:middleware usage.core_wrap_handler$request2, :required-config {:enter [usage.core-wrap-handler/request1]}, :missing usage.core-wrap-handler/request1}
+  ; Missing required: {:enter usage.walkthrough$request2, :required usage.walkthrough/request1}
+  ; {:type usage.walkthrough$request2,
+  ;  :required {:enter [usage.walkthrough/request1]},
+  ;  :missing usage.walkthrough/request1}
 
-  ;; Required middleware in wrong position
-  (let [handler (mid/wrap-handler handler* {:enter [request2
-                                                    request1]})]
+  ;; Required in wrong position
+  (let [handler (handler/build handler* {:enter [request2
+                                                 request1]})]
     (handler {:trace/request []}))
   ;clojure.lang.ExceptionInfo:
-  ; Required middleware in wrong position: {:middleware usage.core_wrap_handler$request2, :requires usage.core-wrap-handler/request1} {:middleware usage.core_wrap_handler$request2, :required-config {:enter [usage.core-wrap-handler/request1]}, :missing usage.core-wrap-handler/request1}
+  ; Required in wrong position: {:enter usage.walkthrough$request2, :required usage.walkthrough/request1}
+  ; {:type usage.walkthrough$request2,
+  ;  :required {:enter [usage.walkthrough/request1]},
+  ;  :missing usage.walkthrough/request1}
 
   ;; Ignore dependency error
-  (let [handler (mid/wrap-handler handler* {:enter [request2]
-                                            :ignore-required #{request1}})]
+  (let [handler (handler/build handler* {:enter [request2]
+                                         :ignore-required #{request1}})]
     (handler {:trace/request []}))
   ;request2 #:trace{:request []}
   ;handler* #:trace{:request [request2]}
