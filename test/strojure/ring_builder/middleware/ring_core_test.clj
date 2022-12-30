@@ -6,7 +6,7 @@
 
 (set! *warn-on-reflection* true)
 
-(declare thrown?)
+(declare thrown? thrown-with-msg?)
 
 #_(test/run-tests)
 
@@ -22,17 +22,22 @@
 (deftest params-request-t
 
   (testing "`params` without options"
-    (test/are [expr] (= "1" (-> expr :request :params (get "a")))
+    (test/are [expr]
+              (= "1" (-> expr :request :params (get "a")))
 
       (test {:enter [(ring/params-request)]})
       (test {:enter [ring/params-request]})
       (test {:enter [`ring/params-request]})
       (test {:enter [::ring/params-request]})
+      (test {:enter [{:type ring/params-request}]})
+      (test {:enter [{:type `ring/params-request}]})
+      (test {:enter [{:type ::ring/params-request}]})
 
       ))
 
-  (testing "`params` with :encoding Windows-1251"
-    (test/are [expr] (= "1" (-> expr :request :params (get "a")))
+  (testing "`params` with :encoding"
+    (test/are [expr]
+              (= "1" (-> expr :request :params (get "a")))
 
       (test {:enter [(ring/params-request {:encoding "UTF-8"})]})
       (test {:enter [(ring/params-request :encoding "UTF-8")]})
@@ -47,7 +52,8 @@
 (deftest keyword-params-request-t
 
   (testing "`keyword-params` without options"
-    (test/are [expr] (= "1" (-> expr :request :params :a))
+    (test/are [expr]
+              (= "1" (-> expr :request :params :a))
 
       (test {:enter [(ring/params-request)
                      (ring/keyword-params-request)]})
@@ -61,10 +67,20 @@
       (test {:enter [::ring/params-request
                      ::ring/keyword-params-request]})
 
+      (test {:enter [{:type ring/params-request}
+                     {:type ring/keyword-params-request}]})
+
+      (test {:enter [{:type `ring/params-request}
+                     {:type `ring/keyword-params-request}]})
+
+      (test {:enter [{:type ::ring/params-request}
+                     {:type ::ring/keyword-params-request}]})
+
       ))
 
   (testing "`keyword-params` with `:parse-namespaces?` true"
-    (test/are [expr] (= "2" (-> expr :request :params :ns/b))
+    (test/are [expr]
+              (= "2" (-> expr :request :params :ns/b))
 
       (test {:enter [(ring/params-request)
                      (ring/keyword-params-request {:parse-namespaces? true})]})
@@ -80,6 +96,38 @@
 
       (test {:enter [{:type ::ring/params-request}
                      {:type ::ring/keyword-params-request :parse-namespaces? true}]})
+
+      ))
+
+  (testing "`keyword-params` missing required"
+    (test/are [expr]
+              (thrown-with-msg? Exception #"(?i)missing" expr)
+
+      (test {:enter [(ring/keyword-params-request)]})
+
+      (test {:enter [ring/keyword-params-request]})
+
+      (test {:enter [`ring/keyword-params-request]})
+
+      (test {:enter [::ring/keyword-params-request]})
+
+      ))
+
+  (testing "`keyword-params` required in wrong position"
+    (test/are [expr]
+              (thrown-with-msg? Exception #"(?i)wrong" expr)
+
+      (test {:enter [(ring/keyword-params-request)
+                     (ring/params-request)]})
+
+      (test {:enter [ring/keyword-params-request
+                     ring/params-request]})
+
+      (test {:enter [`ring/keyword-params-request
+                     `ring/params-request]})
+
+      (test {:enter [::ring/keyword-params-request
+                     ::ring/params-request]})
 
       )))
 

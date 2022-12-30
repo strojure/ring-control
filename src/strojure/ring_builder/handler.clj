@@ -23,6 +23,7 @@
                      (take-while (complement (match-type-tag (config/type-tag wrap))))
                      (some (match-type-tag req-tag)))
         (throw (ex-info (str (if (some (match-type-tag req-tag) (get config-tags config-group))
+                               ;; TODO: change position to order?
                                "Required in wrong position: "
                                "Missing required: ")
                              {config-group (config/type-tag wrap) :required req-tag})
