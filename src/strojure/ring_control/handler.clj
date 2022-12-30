@@ -6,27 +6,38 @@
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
-;; TODO: Validate for duplicate wrappers
+(defn- validate-duplicates
+  [{:keys [outer enter leave inner] :as config-tags}]
+  (letfn [(duplicates [xs] (->> (frequencies xs)
+                                (keep (fn [[k v]] (when (< 1 v) k)))
+                                (seq)))]
+    (when-let [xs (duplicates (concat outer inner))]
+      (throw (ex-info (str "Duplicate handler wraps: " xs)
+                      {:duplicates xs :config (select-keys config-tags [:outer :inner])})))
+    (when-let [xs (duplicates enter)]
+      (throw (ex-info (str "Duplicate request wraps: " xs)
+                      {:duplicates xs :config (select-keys config-tags [:enter])})))
+    (when-let [xs (duplicates leave)]
+      (throw (ex-info (str "Duplicate response wraps: " xs)
+                      {:duplicates xs :config (select-keys config-tags [:leave])})))))
 
 (defn- validate-required
-  [{:keys [ignore-required] :as config}]
-  (let [config-tags (-> (select-keys config [:outer :enter :leave :inner])
-                        (update-vals (partial map config/type-tag)))
-        ignore-required (map config/type-tag ignore-required)
+  [config-tags, ignore-required]
+  (let [ignore-required (map config/type-tag ignore-required)
         match-type-tag (fn [parent] (fn [child] (isa? child parent)))]
-    (doseq [wrap-seq,,,,,,,,,,,,,,, (vals config)
+    (doseq [wrap-seq,,,,,,,,,,,,,,, (vals config-tags)
             wrap,,,,,,,,,,,,,,,,,,, wrap-seq
             [config-group req-tags] (config/required wrap)
             req-tag,,,,,,,,,,,,,,,, req-tags
             :when (not (some (match-type-tag req-tag) ignore-required))]
       (when-not (->> (get config-tags config-group)
-                     (take-while (complement (match-type-tag (config/type-tag wrap))))
+                     (take-while (complement (match-type-tag wrap)))
                      (some (match-type-tag req-tag)))
         (throw (ex-info (str (if (some (match-type-tag req-tag) (get config-tags config-group))
                                "Required in wrong position: "
                                "Missing required: ")
-                             {config-group (config/type-tag wrap) :required req-tag})
-                        {:type (config/type-tag wrap)
+                             {config-group wrap :required req-tag})
+                        {:type wrap
                          :required (config/required wrap)
                          :missing req-tag}))))))
 
@@ -118,9 +129,11 @@
       (handler/build handler {:enter [`enter2]
                               :ignore-required [`enter1]})
   "
-  {:arglists '([handler {:keys [outer enter leave inner ignore-required]}])}
-  [handler {:keys [outer enter leave inner] :as config}]
-  (validate-required config)
+  [handler {:keys [outer enter leave inner ignore-required] :as config}]
+  (doto (-> (select-keys config [:outer :enter :leave :inner])
+            (update-vals (partial map config/type-tag)))
+    (validate-duplicates)
+    (validate-required ignore-required))
   (cond-> handler
     (seq inner) (apply-handler-wraps inner)
     (seq leave) (apply-response-wraps leave)
