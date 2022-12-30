@@ -128,7 +128,7 @@
 
   (testing "`keyword-params` required in wrong position"
     (test/are [expr]
-              (thrown-with-msg? Exception #"(?i)wrong" expr)
+              (thrown-with-msg? Exception #"(?i)wrong position" expr)
 
       (test {:enter [(ring/keyword-params-request)
                      (ring/params-request)]})
