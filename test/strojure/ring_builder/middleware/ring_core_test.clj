@@ -63,26 +63,22 @@
 
       ))
 
-  (comment
-    (#'ring.middleware.keyword-params/keyword-syntax? "a/a" true)
-    (#'ring.middleware.keyword-params/keyify-params {"ns/a" "1"} false)
-    (#'ring.middleware.keyword-params/keyify-params {"a" "1"} false)
-    ((ring/keyword-params-request :parse-namespaces? true) {})
-    )
-
   (testing "`keyword-params` with `:parse-namespaces?` true"
     (test/are [expr] (= "2" (-> expr :request :params :ns/b))
 
-      #_(test {:enter [(ring/params-request)
+      (test {:enter [(ring/params-request)
+                     (ring/keyword-params-request {:parse-namespaces? true})]})
+
+      (test {:enter [(ring/params-request)
                      (ring/keyword-params-request :parse-namespaces? true)]})
 
-      (test {:enter [ring/params-request
+      (test {:enter [{:type ring/params-request}
                      {:type ring/keyword-params-request :parse-namespaces? true}]})
 
-      (test {:enter [`ring/params-request
+      (test {:enter [{:type `ring/params-request}
                      {:type `ring/keyword-params-request :parse-namespaces? true}]})
 
-      (test {:enter [::ring/params-request
+      (test {:enter [{:type ::ring/params-request}
                      {:type ::ring/keyword-params-request :parse-namespaces? true}]})
 
       )))

@@ -11,36 +11,32 @@
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
-(defn wrap-options
-  "Returns wrap method function to use `wrap-fn` as multimethod with optional
-  `options` argument, which can accept maps and pass it as `option` in
-  `wrap-fn`."
-  [wrap-fn]
-  (fn [obj]
-    (if (map? obj) (wrap-fn obj)
-                   (wrap-fn))))
+(defn- tag-options-fn
+  [tag]
+  (-> (fn [& {:as options}]
+        (-> (or options {})
+            (config/with-type-tag tag)))
+      (config/with-type-tag tag)))
 
-(defn wrap-request-fn
+(defn as-wrap-request
   "Returns wrap method implementation for ring request function."
-  [ring-request-fn, tag, as-request-opts]
-  (let [f (-> (fn [& {:as options}]
-                (let [options (or options {})]
-                  (-> (fn [request] (ring-request-fn request options))
-                      (config/with-type-tag tag))))
-              (config/with-type-tag tag))]
-    (config/as-wrap-request tag (wrap-options f) as-request-opts)
-    f))
+  [tag, ring-request-fn, as-wrap-opts]
+  (letfn [(wrap-fn [obj]
+            (let [options (if (map? obj) obj {})]
+              (fn wrap-request [request]
+                (ring-request-fn request options))))]
+    (config/as-wrap-request tag wrap-fn as-wrap-opts)
+    (tag-options-fn tag)))
 
-(defn wrap-response-fn
+(defn as-wrap-response
   "Returns wrap method implementation for ring response function."
-  [ring-response-fn, tag, as-response-opts]
-  (let [f (-> (fn [& {:as options}]
-                (let [options (or options {})]
-                  (-> (fn [response request] (ring-response-fn response request options))
-                      (config/with-type-tag tag))))
-              (config/with-type-tag tag))]
-    (config/as-wrap-response tag (wrap-options f) as-response-opts)
-    f))
+  [tag, ring-response-fn, as-wrap-opts]
+  (letfn [(wrap-fn [obj]
+            (let [options (if (map? obj) obj {})]
+              (fn wrap-response [response request]
+                (ring-response-fn response request options))))]
+    (config/as-wrap-response tag wrap-fn as-wrap-opts)
+    (tag-options-fn tag)))
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
@@ -60,8 +56,8 @@
                   the request character encoding, or \"UTF-8\" if no request
                   character encoding is set.
   "
-  (wrap-request-fn params/params-request
-                   `params-request {:tags [::params-request]}))
+  (as-wrap-request `params-request params/params-request
+                   {:tags [::params-request]}))
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
@@ -78,9 +74,9 @@
   - `:parse-namespaces?` – if true, parse the parameters into namespaced
                            keywords (defaults to false)
   "
-  (wrap-request-fn keyword-params/keyword-params-request
-                   `keyword-params-request {:tags [::keyword-params-request]
-                                            :requires {:enter [`params-request]}}))
+  (as-wrap-request `keyword-params-request keyword-params/keyword-params-request
+                   {:tags [::keyword-params-request]
+                    :requires {:enter [`params-request]}}))
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
@@ -97,8 +93,8 @@
                     used in addition to the ones defined in
                     `ring.util.mime-type/default-mime-types`
   "
-  (wrap-response-fn content-type/content-type-response
-                    `content-type-response {:tags [::content-type-response]}))
+  (as-wrap-response `content-type-response content-type/content-type-response
+                    {:tags [::content-type-response]}))
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
