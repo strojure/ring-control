@@ -13,7 +13,8 @@
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
 (defn- test [config]
-  (let [handler (-> (fn [request] {:request request})
+  (let [handler (-> (fn [request] {:request request
+                                   :session {:sess/a 1}})
                     (handler/build config))]
     (handler {:uri "/index.html"
               :query-string "a=1&ns/b=2"})))
@@ -160,5 +161,20 @@
       (test {:leave [{:type ::ring/content-type-response}]})
 
       )))
+
+;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+
+(deftest wrap-session-t
+  (test/are [expr] expr
+
+    (-> (test {:outer [ring/wrap-session]})
+        :request
+        (contains? :session))
+
+    (-> (test {:outer [ring/wrap-session]})
+        :headers
+        (contains? "Set-Cookie"))
+
+    ))
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,

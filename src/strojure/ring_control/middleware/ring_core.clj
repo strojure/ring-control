@@ -4,6 +4,7 @@
   (:require [ring.middleware.content-type :as content-type]
             [ring.middleware.keyword-params :as keyword-params]
             [ring.middleware.params :as params]
+            [ring.middleware.session :as session]
             [strojure.ring-control.config :as config]))
 
 (set! *warn-on-reflection* true)
@@ -16,6 +17,16 @@
         (-> (or options {})
             (config/with-type-tag tag)))
       (config/with-type-tag tag)))
+
+(defn as-wrap-handler
+  "Returns wrap method implementation for ring handler middleware."
+  [tag, ring-handler-fn, as-wrap-opts]
+  (letfn [(wrap-fn [obj]
+            (let [options (if (map? obj) obj {})]
+              (fn wrap-handler [handler]
+                (ring-handler-fn handler options))))]
+    (config/as-wrap-handler tag wrap-fn as-wrap-opts)
+    (tag-options-fn tag)))
 
 (defn as-wrap-request
   "Returns wrap method implementation for ring request function."
@@ -94,5 +105,40 @@
   "
   (as-wrap-response `content-type-response content-type/content-type-response
                     {:tags [::content-type-response]}))
+
+;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+
+(def ^{:arglists '([& {:as options}])}
+  wrap-session
+  "Reads in the current HTTP session map, and adds it to the `:session` key on
+  the request. If a `:session` key is added to the response by the handler, the
+  session is updated with the new value. If the value is nil, the session is
+  deleted.
+
+  Accepts the following options:
+
+  - `:store`
+      + An implementation of the SessionStore protocol in the
+        `ring.middleware.session.store` namespace. This determines how the
+        session is stored.
+      + Defaults to in-memory storage using
+        `ring.middleware.session.store/memory-store`.
+
+  - `:root`
+      + The root path of the session. Any path above this will not be able to
+        see this session. Equivalent to setting the cookie's path attribute.
+      + Defaults to \"/\".
+
+  - `:cookie-name`
+      + The name of the cookie that holds the session key.
+      + Defaults to \"ring-session\".
+
+  - `:cookie-attrs`
+      + A map of attributes to associate with the session cookie.
+      + Defaults to `{:http-only true}`. This may be overridden on a
+        per-response basis by adding `:session-cookie-attrs` to the response.
+  "
+  (as-wrap-handler `wrap-session session/wrap-session
+                    {:tags [::wrap-session]}))
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
