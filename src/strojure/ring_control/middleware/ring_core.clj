@@ -4,8 +4,7 @@
   (:require [ring.middleware.content-type :as content-type]
             [ring.middleware.keyword-params :as keyword-params]
             [ring.middleware.params :as params]
-            [strojure.ring-control.config :as config]
-            [strojure.ring-control.handler :as handler]))
+            [strojure.ring-control.config :as config]))
 
 (set! *warn-on-reflection* true)
 
@@ -95,31 +94,5 @@
   "
   (as-wrap-response `content-type-response content-type/content-type-response
                     {:tags [::content-type-response]}))
-
-;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
-
-(defn test-config [config]
-  (let [handler (-> (fn [request] {:request request})
-                    (handler/build config))]
-    (handler {:uri "/" :query-string "a=1"})))
-
-(comment
-  (test-config {:enter [params-request]})
-  (test-config {:enter [(params-request)]})
-  (test-config {:enter [{:type `params-request :encoding "UTF-8"}]})
-  (test-config {:enter [{:type ::params-request :encoding "UTF-8"}]})
-  (test-config {:enter [(params-request)
-                        (keyword-params-request)]
-                :leave [(content-type-response)]})
-  (test-config {:enter [{:type `params-request :encoding "UTF-8"}
-                        {:type `keyword-params-request :parse-namespaces? true}]})
-  (test-config {:enter [{:type ::params-request :encoding "UTF-8"}
-                        {:type ::keyword-params-request :parse-namespaces? true}]})
-  (config/type-tag params-request)
-  (config/type-tag keyword-params-request)
-  (isa? (config/type-tag params-request) `params-request)
-  (test-config {:enter [{:type params-request :encoding "UTF-8"}
-                        {:type keyword-params-request :parse-namespaces? true}]})
-  )
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
