@@ -18,34 +18,34 @@
             (config/with-type-tag tag)))
       (config/with-type-tag tag)))
 
-(defn as-wrap-handler
+(defn as-handler-fn
   "Returns wrap method implementation for ring handler middleware."
   [tag, ring-handler-fn, as-wrap-opts]
   (letfn [(wrap-fn [obj]
             (let [options (if (map? obj) obj {})]
               (fn wrap-handler [handler]
                 (ring-handler-fn handler options))))]
-    (config/as-wrap-handler tag wrap-fn as-wrap-opts)
+    (config/as-handler-fn tag wrap-fn as-wrap-opts)
     (tag-options-fn tag)))
 
-(defn as-wrap-request
+(defn as-request-fn
   "Returns wrap method implementation for ring request function."
   [tag, ring-request-fn, as-wrap-opts]
   (letfn [(wrap-fn [obj]
             (let [options (if (map? obj) obj {})]
               (fn wrap-request [request]
                 (ring-request-fn request options))))]
-    (config/as-wrap-request tag wrap-fn as-wrap-opts)
+    (config/as-request-fn tag wrap-fn as-wrap-opts)
     (tag-options-fn tag)))
 
-(defn as-wrap-response
+(defn as-response-fn
   "Returns wrap method implementation for ring response function."
   [tag, ring-response-fn, as-wrap-opts]
   (letfn [(wrap-fn [obj]
             (let [options (if (map? obj) obj {})]
               (fn wrap-response [response request]
                 (ring-response-fn response request options))))]
-    (config/as-wrap-response tag wrap-fn as-wrap-opts)
+    (config/as-response-fn tag wrap-fn as-wrap-opts)
     (tag-options-fn tag)))
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
@@ -66,8 +66,8 @@
                   the request character encoding, or \"UTF-8\" if no request
                   character encoding is set.
   "
-  (as-wrap-request `params-request params/params-request
-                   {:tags [::params-request]}))
+  (as-request-fn `params-request params/params-request
+                 {:tags [::params-request]}))
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
@@ -84,8 +84,8 @@
   - `:parse-namespaces?` – if true, parse the parameters into namespaced
                            keywords (defaults to false)
   "
-  (as-wrap-request `keyword-params-request keyword-params/keyword-params-request
-                   {:tags [::keyword-params-request]
+  (as-request-fn `keyword-params-request keyword-params/keyword-params-request
+                 {:tags [::keyword-params-request]
                     :requires {:enter [`params-request]}}))
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
@@ -103,8 +103,8 @@
                     used in addition to the ones defined in
                     `ring.util.mime-type/default-mime-types`
   "
-  (as-wrap-response `content-type-response content-type/content-type-response
-                    {:tags [::content-type-response]}))
+  (as-response-fn `content-type-response content-type/content-type-response
+                  {:tags [::content-type-response]}))
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
@@ -138,7 +138,7 @@
       + Defaults to `{:http-only true}`. This may be overridden on a
         per-response basis by adding `:session-cookie-attrs` to the response.
   "
-  (as-wrap-handler `wrap-session session/wrap-session
-                    {:tags [::wrap-session]}))
+  (as-handler-fn `wrap-session session/wrap-session
+                 {:tags [::wrap-session]}))
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,

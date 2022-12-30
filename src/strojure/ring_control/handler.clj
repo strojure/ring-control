@@ -44,17 +44,17 @@
 (defn- apply-handler-wraps
   [handler fs]
   (->> (reverse fs)
-       (map config/wrap-handler-fn)
-       (reduce (fn [handler wrap-fn] (wrap-fn handler))
+       (map config/handler-fn)
+       (reduce (fn [handler ff] (ff handler))
                handler)))
 
 (defn- apply-request-wraps
   [handler fs]
   (let [request-fn (->> (reverse fs)
-                        (map config/wrap-request-fn)
-                        (reduce (fn [f wrap-fn]
+                        (map config/request-fn)
+                        (reduce (fn [f ff]
                                   (fn [request]
-                                    (f (wrap-fn request))))))]
+                                    (f (ff request))))))]
     (fn
       ([request]
        (handler (request-fn request)))
@@ -64,10 +64,10 @@
 (defn- apply-response-wraps
   [handler fs]
   (let [response-fn (->> (reverse fs)
-                         (map config/wrap-response-fn)
-                         (reduce (fn [f wrap-fn]
+                         (map config/response-fn)
+                         (reduce (fn [f ff]
                                    (fn [response request]
-                                     (f (wrap-fn response request) request)))))]
+                                     (f (ff response request) request)))))]
     (fn
       ([request]
        (response-fn (handler request) request))

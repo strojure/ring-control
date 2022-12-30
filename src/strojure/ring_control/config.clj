@@ -35,17 +35,17 @@
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
-(defmulti wrap-handler-fn
+(defmulti handler-fn
   "Returns Ring middleware `(fn [handler] new-handler)` for the object."
   {:arglists '([obj])}
   type-tag)
 
-(defmulti wrap-request-fn
+(defmulti request-fn
   "Returns function `(fn [request] new-request)` for the object."
   {:arglists '([obj])}
   type-tag)
 
-(defmulti wrap-response-fn
+(defmulti response-fn
   "Returns function `(fn [response request] new-response)` for the object."
   {:arglists '([obj])}
   type-tag)
@@ -67,22 +67,21 @@
   [tag config]
   (.addMethod ^MultiFn required tag (constantly config)))
 
-(defn- set-wrap-method
-  {:arglists '([multi tag method]
-               [multi tag method {:keys [tags requires]}])}
-  ([multi tag method] (set-wrap-method multi method tag nil))
-  ([multi tag method options]
-   (.addMethod ^MultiFn multi tag method)
-   ;; Derive more tags from the `tag`.
-   (run! (partial derive-type-tag tag)
-         (:tags options))
-   ;; Set required config.
-   (some->> (:requires options)
-            (set-required tag))))
+(defn- impl-as
+  [multi]
+  (fn impl
+    ([tag method] (impl tag method nil))
+    ([tag method options]
+     (.addMethod ^MultiFn multi tag method)
+     ;; Derive more tags from the `tag`.
+     (run! (partial derive-type-tag tag)
+           (:tags options))
+     ;; Set required config.
+     (some->> (:requires options)
+              (set-required tag)))))
 
-(def ^{:arglists '([tag f]
-                   [tag f {:keys [tags requires]}])}
-  as-wrap-handler
+(def ^{:arglists '([tag f] [tag f {:keys [tags requires]}])}
+  as-handler-fn
   "Associates function `(fn [_] (fn [handler] new-handler))` with type `tag`.
 
   Options:
@@ -90,11 +89,10 @@
   - `:tags`     – a sequence of type tags to derive from the `tag`.
   - `:requires` – a required configuration to validate for the `tag`.
   "
-  (partial set-wrap-method wrap-handler-fn))
+  (impl-as handler-fn))
 
-(def ^{:arglists '([tag f]
-                   [tag f {:keys [tags requires]}])}
-  as-wrap-request
+(def ^{:arglists '([tag f] [tag f {:keys [tags requires]}])}
+  as-request-fn
   "Associates function `(fn [_] (fn [request] new-request)) with type `tag`.
 
   Options:
@@ -102,11 +100,10 @@
   - `:tags`     – a sequence of type tags to derive from the `tag`.
   - `:requires` – a required configuration to validate for the `tag`.
   "
-  (partial set-wrap-method wrap-request-fn))
+  (impl-as request-fn))
 
-(def ^{:arglists '([tag f]
-                   [tag f {:keys [tags requires]}])}
-  as-wrap-response
+(def ^{:arglists '([tag f] [tag f {:keys [tags requires]}])}
+  as-response-fn
   "Associates function `(fn [_] (fn [response request] new-response))` with type
   `tag`.
 
@@ -115,6 +112,6 @@
   - `:tags`     – a sequence of type tags to derive from the `tag`.
   - `:requires` – a required configuration to validate for the `tag`.
   "
-  (partial set-wrap-method wrap-response-fn))
+  (impl-as response-fn))
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,

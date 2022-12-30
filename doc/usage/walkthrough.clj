@@ -22,7 +22,7 @@
               (update :trace/response conj 'wrap2))
       (->> (println 'wrap2)))))
 
-(config/as-wrap-handler `wrap2 (constantly wrap2))
+(config/as-handler-fn `wrap2 (constantly wrap2))
 
 (defn- wrap3 [handler]
   (fn [request]
@@ -41,10 +41,10 @@
       (->> (println 'wrap4)))))
 
 ;; Register functions to be used in configuration.
-(config/as-wrap-handler `wrap1 (constantly wrap1) {:tags [wrap1 ::wrap1]})
-(config/as-wrap-handler `wrap2 (constantly wrap2) {:tags [wrap2 ::wrap2]})
-(config/as-wrap-handler `wrap3 (constantly wrap3) {:tags [wrap3 ::wrap3]})
-(config/as-wrap-handler `wrap4 (constantly wrap4) {:tags [wrap4 ::wrap4]})
+(config/as-handler-fn `wrap1 (constantly wrap1) {:tags [wrap1 ::wrap1]})
+(config/as-handler-fn `wrap2 (constantly wrap2) {:tags [wrap2 ::wrap2]})
+(config/as-handler-fn `wrap3 (constantly wrap3) {:tags [wrap3 ::wrap3]})
+(config/as-handler-fn `wrap4 (constantly wrap4) {:tags [wrap4 ::wrap4]})
 
 ;; - Define ring request wrappers
 
@@ -57,8 +57,8 @@
   (update request :trace/request conj 'request2))
 
 ;; Register functions to be used in configuration.
-(config/as-wrap-request `request1 (constantly request1) {:tags [request1 ::request1]})
-(config/as-wrap-request `request2 (constantly request2) {:tags [request2 ::request2]})
+(config/as-request-fn `request1 (constantly request1) {:tags [request1 ::request1]})
+(config/as-request-fn `request2 (constantly request2) {:tags [request2 ::request2]})
 
 ;; - Define ring response wrappers
 
@@ -71,8 +71,8 @@
   (update response :trace/response conj 'response2))
 
 ;; Register functions to be used in configuration.
-(config/as-wrap-response `response1 (constantly response1) {:tags [response1 ::response1]})
-(config/as-wrap-response `response2 (constantly response2) {:tags [response2 ::response2]})
+(config/as-response-fn `response1 (constantly response1) {:tags [response1 ::response1]})
+(config/as-response-fn `response2 (constantly response2) {:tags [response2 ::response2]})
 
 ;; ## Define handler function to be wrapped
 
