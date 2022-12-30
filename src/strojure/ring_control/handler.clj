@@ -1,6 +1,6 @@
-(ns strojure.ring-builder.handler
+(ns strojure.ring-control.handler
   "Functions for building Ring handler from configuration."
-  (:require [strojure.ring-builder.config :as config]))
+  (:require [strojure.ring-control.config :as config]))
 
 (set! *warn-on-reflection* true)
 

@@ -1,8 +1,8 @@
-(ns strojure.ring-builder.middleware.ring-core-test
+(ns strojure.ring-control.middleware.ring-core-test
   (:refer-clojure :exclude [test])
   (:require [clojure.test :as test :refer [deftest testing]]
-            [strojure.ring-builder.handler :as handler]
-            [strojure.ring-builder.middleware.ring-core :as ring]))
+            [strojure.ring-control.handler :as handler]
+            [strojure.ring-control.middleware.ring-core :as ring]))
 
 (set! *warn-on-reflection* true)
 

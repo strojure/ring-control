@@ -1,11 +1,11 @@
-(ns strojure.ring-builder.middleware.ring-core
+(ns strojure.ring-control.middleware.ring-core
   "Builder configuration functions for the middlewares from the
   `ring.middleware` namespace."
   (:require [ring.middleware.content-type :as content-type]
             [ring.middleware.keyword-params :as keyword-params]
             [ring.middleware.params :as params]
-            [strojure.ring-builder.config :as config]
-            [strojure.ring-builder.handler :as handler]))
+            [strojure.ring-control.config :as config]
+            [strojure.ring-control.handler :as handler]))
 
 (set! *warn-on-reflection* true)
 

@@ -1,4 +1,4 @@
-(ns strojure.ring-builder.config
+(ns strojure.ring-control.config
   "Builder configuration implementation."
   (:import (clojure.lang MultiFn Named)))
 

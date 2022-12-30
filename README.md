@@ -1,9 +1,9 @@
-# ring-builder
+# ring-control
 
 More controllable composition of Ring middlewares.
 
-[![cljdoc badge](https://cljdoc.org/badge/com.github.strojure/ring-builder)](https://cljdoc.org/d/com.github.strojure/ring-builder)
-[![Clojars Project](https://img.shields.io/clojars/v/com.github.strojure/ring-builder.svg)](https://clojars.org/com.github.strojure/ring-builder)
+[![cljdoc badge](https://cljdoc.org/badge/com.github.strojure/ring-control)](https://cljdoc.org/d/com.github.strojure/ring-control)
+[![Clojars Project](https://img.shields.io/clojars/v/com.github.strojure/ring-control.svg)](https://clojars.org/com.github.strojure/ring-control)
 
 ## Motivation
 
@@ -83,4 +83,4 @@ See also [more sophisticated example](doc/usage/walkthrough.clj).
 ---
 
 [handler_build]:
-https://cljdoc.org/d/com.github.strojure/ring-builder/CURRENT/api/strojure.ring-builder.handler#build
+https://cljdoc.org/d/com.github.strojure/ring-control/CURRENT/api/strojure.ring-control.handler#build

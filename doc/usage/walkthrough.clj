@@ -1,6 +1,6 @@
 (ns usage.walkthrough
-  (:require [strojure.ring-builder.config :as config]
-            [strojure.ring-builder.handler :as handler]))
+  (:require [strojure.ring-control.config :as config]
+            [strojure.ring-control.handler :as handler]))
 
 ;; ## Define builder configuration
 
