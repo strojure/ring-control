@@ -2,10 +2,11 @@
   "Builder configuration functions for the middlewares from the
   `ring.middleware` namespace."
   (:require [ring.middleware.content-type :as content-type]
+            [ring.middleware.cookies :as cookies]
+            [ring.middleware.flash :as flash]
             [ring.middleware.keyword-params :as keyword-params]
             [ring.middleware.params :as params]
             [ring.middleware.session :as session]
-            [ring.middleware.flash :as flash]
             [strojure.ring-control.config :as config]))
 
 (set! *warn-on-reflection* true)
@@ -127,6 +128,47 @@
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
 (def ^{:arglists '([& {:as options}])}
+  wrap-cookies
+  "Parses the cookies in the request map, then assocs the resulting map
+  to the :cookies key on the request.
+
+  Accepts the following options:
+
+  - `:decoder`
+      + A function to decode the cookie value. Expects a function that takes a
+        string and returns a string.
+      + Defaults to URL-decoding.
+
+  - `:encoder`
+      + A function to encode the cookie name and value. Expects a function that
+        takes a name/value map and returns a string.
+      + Defaults to URL-encoding.
+
+  Each cookie is represented as a map, with its value being held in the
+  `:value` key. A cookie may optionally contain a `:path`, `:domain` or `:port`
+  attribute.
+
+  To set cookies, add a map to the :cookies key on the response. The values
+  of the cookie map can either be strings, or maps containing the following
+  keys:
+
+  - `:value`     – the new value of the cookie
+  - `:path`      – the sub-path the cookie is valid for
+  - `:domain`    – the domain the cookie is valid for
+  - `:max-age`   – the maximum age in seconds of the cookie
+  - `:expires`   – a date string at which the cookie will expire
+  - `:secure`    – set to true if the cookie requires HTTPS, prevent HTTP access
+  - `:http-only` – set to true if the cookie is valid for HTTP and HTTPS only
+                   (i.e. prevent JavaScript access)
+  - `:same-site` – set to `:strict` or `:lax` to set SameSite attribute of the
+                   cookie
+  "
+  (as-handler-fn `wrap-cookies cookies/wrap-cookies
+                 {:tags [::wrap-cookies]}))
+
+;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+
+(def ^{:arglists '([& {:as options}])}
   wrap-session
   "Reads in the current HTTP session map, and adds it to the `:session` key on
   the request. If a `:session` key is added to the response by the handler, the
@@ -155,9 +197,14 @@
       + A map of attributes to associate with the session cookie.
       + Defaults to `{:http-only true}`. This may be overridden on a
         per-response basis by adding `:session-cookie-attrs` to the response.
+
+  NOTE: Includes [[wrap-cookies]] behaviour.
   "
   (as-handler-fn `wrap-session session/wrap-session
                  {:tags [::wrap-session]}))
+
+;; `wrap-session` includes `wrap-cookies`
+(derive `wrap-session `wrap-cookies)
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 

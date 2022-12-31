@@ -14,6 +14,7 @@
 
 (defn- test [config]
   (let [handler (-> (fn [request] {:request request
+                                   :cookies {:a 1}
                                    :session {:sess/a 1}
                                    :flash ::flash})
                     (handler/build config))]
@@ -162,6 +163,23 @@
       (test {:leave [{:type ::ring/content-type-response}]})
 
       )))
+
+;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+
+(deftest wrap-cookies-t
+  (test/are [expr] expr
+
+    (-> (test {:outer [ring/wrap-cookies]})
+        :request
+        (contains? :cookies))
+
+    (-> (test {:outer [ring/wrap-cookies]})
+        :headers
+        (get "Set-Cookie")
+        (first)
+        #{"a=1"})
+
+    ))
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
