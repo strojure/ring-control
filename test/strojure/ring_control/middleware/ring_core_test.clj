@@ -14,7 +14,8 @@
 
 (defn- test [config]
   (let [handler (-> (fn [request] {:request request
-                                   :session {:sess/a 1}})
+                                   :session {:sess/a 1}
+                                   :flash ::flash})
                     (handler/build config))]
     (handler {:uri "/index.html"
               :query-string "a=1&ns/b=2"})))
@@ -127,9 +128,9 @@
 
       ))
 
-  (testing "`keyword-params` required in wrong position"
+  (testing "`keyword-params` misplaced required"
     (test/are [expr]
-              (thrown-with-msg? Exception #"(?i)wrong position" expr)
+              (thrown-with-msg? Exception #"(?i)misplaced" expr)
 
       (test {:enter [(ring/keyword-params-request)
                      (ring/params-request)]})
@@ -174,6 +175,40 @@
     (-> (test {:outer [ring/wrap-session]})
         :headers
         (contains? "Set-Cookie"))
+
+    ))
+
+;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+
+(deftest wrap-flash-t
+  (test/are [expr] (-> expr :request (contains? :flash))
+
+    (test {:outer [ring/wrap-session
+                   ring/wrap-flash]})
+
+    (test {:inner [ring/wrap-session
+                   ring/wrap-flash]})
+
+    (test {:outer [ring/wrap-session]
+           :inner [ring/wrap-flash]})
+
+    )
+  (test/are [expr] (thrown-with-msg? Exception #"(?i)missing" expr)
+
+    (test {:outer [ring/wrap-flash]})
+    (test {:inner [ring/wrap-flash]})
+
+    )
+  (test/are [expr] (thrown-with-msg? Exception #"(?i)misplaced" expr)
+
+    (test {:outer [ring/wrap-flash
+                   ring/wrap-session]})
+
+    (test {:inner [ring/wrap-flash
+                   ring/wrap-session]})
+
+    (test {:outer [ring/wrap-flash]
+           :inner [ring/wrap-session]})
 
     ))
 

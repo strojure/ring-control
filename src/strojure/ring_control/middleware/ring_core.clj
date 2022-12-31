@@ -5,6 +5,7 @@
             [ring.middleware.keyword-params :as keyword-params]
             [ring.middleware.params :as params]
             [ring.middleware.session :as session]
+            [ring.middleware.flash :as flash]
             [strojure.ring-control.config :as config]))
 
 (set! *warn-on-reflection* true)
@@ -18,13 +19,24 @@
             (config/with-type-tag tag)))
       (config/with-type-tag tag)))
 
+(defn without-options
+  "Marks ring function as having no `options` argument."
+  [ring-fn]
+  (vary-meta ring-fn assoc ::without-options true))
+
+(defn- has-options?
+  [ring-fn]
+  (not (-> ring-fn meta ::without-options)))
+
 (defn as-handler-fn
   "Returns wrap method implementation for ring handler middleware."
   [tag, ring-handler-fn, as-wrap-opts]
   (letfn [(wrap-fn [obj]
-            (let [options (if (map? obj) obj {})]
-              (fn wrap-handler [handler]
-                (ring-handler-fn handler options))))]
+            (if (has-options? ring-handler-fn)
+              (let [options (if (map? obj) obj {})]
+                (fn wrap-handler [handler]
+                  (ring-handler-fn handler options)))
+              ring-handler-fn))]
     (config/as-handler-fn tag wrap-fn as-wrap-opts)
     (tag-options-fn tag)))
 
@@ -32,9 +44,11 @@
   "Returns wrap method implementation for ring request function."
   [tag, ring-request-fn, as-wrap-opts]
   (letfn [(wrap-fn [obj]
-            (let [options (if (map? obj) obj {})]
-              (fn wrap-request [request]
-                (ring-request-fn request options))))]
+            (if (has-options? ring-request-fn)
+              (let [options (if (map? obj) obj {})]
+                (fn wrap-request [request]
+                  (ring-request-fn request options)))
+              ring-request-fn))]
     (config/as-request-fn tag wrap-fn as-wrap-opts)
     (tag-options-fn tag)))
 
@@ -42,9 +56,11 @@
   "Returns wrap method implementation for ring response function."
   [tag, ring-response-fn, as-wrap-opts]
   (letfn [(wrap-fn [obj]
-            (let [options (if (map? obj) obj {})]
-              (fn wrap-response [response request]
-                (ring-response-fn response request options))))]
+            (if (has-options? ring-response-fn)
+              (let [options (if (map? obj) obj {})]
+                (fn wrap-response [response request]
+                  (ring-response-fn response request options)))
+              ring-response-fn))]
     (config/as-response-fn tag wrap-fn as-wrap-opts)
     (tag-options-fn tag)))
 
@@ -83,10 +99,12 @@
 
   - `:parse-namespaces?` – if true, parse the parameters into namespaced
                            keywords (defaults to false)
+
+  Requires [[params-request]].
   "
   (as-request-fn `keyword-params-request keyword-params/keyword-params-request
                  {:tags [::keyword-params-request]
-                    :requires {:enter [`params-request]}}))
+                  :requires {:request [`params-request]}}))
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
@@ -140,5 +158,17 @@
   "
   (as-handler-fn `wrap-session session/wrap-session
                  {:tags [::wrap-session]}))
+
+;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+
+(def ^{:arglists '([])}
+  wrap-flash
+  "If a `:flash` key is set on the response by the handler, a `:flash` key with
+  the same value will be set on the next request that shares the same session.
+  This is useful for small messages that persist across redirects. Requires
+  [[wrap-session]]."
+  (as-handler-fn `wrap-flash (without-options flash/wrap-flash)
+                 {:tags [::wrap-flash]
+                  :requires {:request [`wrap-session]}}))
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,

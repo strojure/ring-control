@@ -51,9 +51,9 @@
   type-tag)
 
 (defmulti required
-  "Returns configuration `{:keys [outer enter leave inner]}` where every key
-  contains sequence of type tags to be presented in configuration before the
-  current tag."
+  "Returns configuration `{:keys [request response]}` where keys contains
+  sequence of type tags to be presented in configuration before the current tag
+  in request or response flow."
   {:arglists '([obj])}
   type-tag)
 
@@ -63,7 +63,12 @@
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
 (defn set-required
-  "Assigns [[required-config]] value for the type `tag`."
+  "Assigns [[required]] value for the type `tag`.
+
+  - `:request`  – a sequence of type tags to handle request before `tag`.
+  - `:response` – a sequence of type tags to handle response before `tag`.
+  "
+  {:arglists '([tag {:keys [request response]}])}
   [tag config]
   (.addMethod ^MultiFn required tag (constantly config)))
 

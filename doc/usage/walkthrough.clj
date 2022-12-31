@@ -126,27 +126,27 @@
 
 ;; - Configuration with dependency
 
-;; Requires to :enter `request1` before `request2`
-(config/set-required `request2 {:enter [`request1]})
+;; Requires for `request1` before `request2`
+(config/set-required `request2 {:request [`request1]})
 
 (comment
   ;; Missing required
   (let [handler (handler/build handler* {:enter [request2]})]
     (handler {:trace/request []}))
   ;clojure.lang.ExceptionInfo:
-  ; Missing required: {:enter usage.walkthrough$request2, :required usage.walkthrough/request1}
+  ; Missing required: {:type usage.walkthrough$request2, :required [:request usage.walkthrough/request1]}
   ; {:type usage.walkthrough$request2,
-  ;  :required {:enter [usage.walkthrough/request1]},
+  ;  :required {:request [usage.walkthrough/request1]},
   ;  :missing usage.walkthrough/request1}
 
-  ;; Required in wrong position
+  ;; Misplaced required
   (let [handler (handler/build handler* {:enter [request2
                                                  request1]})]
     (handler {:trace/request []}))
   ;clojure.lang.ExceptionInfo:
-  ; Required in wrong position: {:enter usage.walkthrough$request2, :required usage.walkthrough/request1}
+  ; Misplaced required: {:type usage.walkthrough$request2, :required [:request usage.walkthrough/request1]}
   ; {:type usage.walkthrough$request2,
-  ;  :required {:enter [usage.walkthrough/request1]},
+  ;  :required {:request [usage.walkthrough/request1]},
   ;  :missing usage.walkthrough/request1}
 
   ;; Ignore dependency error
