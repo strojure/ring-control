@@ -133,7 +133,7 @@
   We can also define dependency of `` `enter2 `` on `` `enter1 `` using
   [[config/set-required]] function:
 
-      (config/set-required `enter2 {:enter [`enter1]})
+      (config/set-required `enter2 {:request [`enter1]})
 
       ;; This fails with exception about missing required:
       (handler/build handler {:enter [`enter2]})
