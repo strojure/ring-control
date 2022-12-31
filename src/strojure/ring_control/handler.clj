@@ -8,14 +8,27 @@
 
 (defn- validate-duplicates
   [{{:keys [request response]} ::flow-types}]
-  (letfn [(validate [group xs]
-            (when-let [dubs (->> (frequencies xs)
-                                 (keep (fn [[k v]] (when (< 1 v) k)))
-                                 (seq))]
-              (throw (ex-info (str "Duplicates in config: " dubs)
-                              {:duplicates dubs group xs}))))]
-    (validate :request request)
-    (validate :response response)))
+  (letfn
+    [(tag-with-parents [t]
+       (cons [t t] (->> (parents t)
+                        (map (fn [tt] [tt t])))))
+     (entries-with-dubs [[t xs]]
+       (when (next xs)
+         [t (->> xs (map second) (distinct))]))
+     (drop-parent-keys [tags m]
+       (select-keys m tags))
+     (validate-group [group tags]
+       ;; Collect duplicates considering tag parents.
+       (when-let [dubs (->> tags
+                            (mapcat tag-with-parents)
+                            (group-by first)
+                            (drop-parent-keys tags)
+                            (keep entries-with-dubs)
+                            (seq))]
+         (throw (ex-info (str "Duplicates in config: " dubs)
+                         {:duplicates dubs group tags}))))]
+    (validate-group :request request)
+    (validate-group :response response)))
 
 (defn- validate-required
   [{:keys [::flow-items ::flow-types ignore-required]}]
@@ -93,6 +106,8 @@
                 raise)))))
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+
+;; TODO: Document validation rules
 
 (defn build
   "Returns ring handler applying configuration options:
