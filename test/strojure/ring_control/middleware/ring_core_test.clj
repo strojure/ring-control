@@ -19,7 +19,7 @@
                                    :flash ::flash})
                     (handler/build config))]
     (handler {:uri "/index.html"
-              :query-string "a=1&ns/b=2"})))
+              :query-string "a=1&ns/b=2&foo[]=bar"})))
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
@@ -114,38 +114,28 @@
                      {:type ::ring/keyword-params-request :parse-namespaces? true}]})
 
       ))
+  )
 
-  (testing "`keyword-params` missing required"
-    (test/are [expr]
-              (thrown-with-msg? Exception #"(?i)missing" expr)
+;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
-      (test {:enter [(ring/keyword-params-request)]})
+(deftest multipart-params-request-t
+  (test/are [expr]
+            (-> expr :request (contains? :multipart-params))
 
-      (test {:enter [ring/keyword-params-request]})
+    (test {:enter [(ring/multipart-params-request)]})
 
-      (test {:enter [`ring/keyword-params-request]})
+    ))
 
-      (test {:enter [::ring/keyword-params-request]})
+;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
-      ))
+(deftest nested-params-request-t
+  (test/are [expr]
+            (= ["bar"] (-> expr :request :params (get "foo")))
 
-  (testing "`keyword-params` misplaced required"
-    (test/are [expr]
-              (thrown-with-msg? Exception #"(?i)misplaced" expr)
+    (test {:enter [(ring/params-request)
+                   (ring/nested-params-request)]})
 
-      (test {:enter [(ring/keyword-params-request)
-                     (ring/params-request)]})
-
-      (test {:enter [ring/keyword-params-request
-                     ring/params-request]})
-
-      (test {:enter [`ring/keyword-params-request
-                     `ring/params-request]})
-
-      (test {:enter [::ring/keyword-params-request
-                     ::ring/params-request]})
-
-      )))
+    ))
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 

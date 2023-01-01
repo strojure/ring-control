@@ -3,9 +3,15 @@
   `ring.middleware` namespace."
   (:require [ring.middleware.content-type :as content-type]
             [ring.middleware.cookies :as cookies]
+            [ring.middleware.file :as file]
             [ring.middleware.flash :as flash]
+            [ring.middleware.head :as head]
             [ring.middleware.keyword-params :as keyword-params]
+            [ring.middleware.multipart-params :as multipart-params]
+            [ring.middleware.nested-params :as nested-params]
+            [ring.middleware.not-modified :as not-modified]
             [ring.middleware.params :as params]
+            [ring.middleware.resource :as resource]
             [ring.middleware.session :as session]
             [strojure.ring-control.config :as config]))
 
@@ -89,6 +95,70 @@
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
 (def ^{:arglists '([& {:as options}])}
+  multipart-params-request
+  "Middleware to parse multipart parameters from a request. Adds the
+  following keys to the request map:
+
+  - `:multipart-params` - a map of multipart parameters
+  - `:params`           - a merged map of all types of parameter
+
+  The following options are accepted
+
+  - `:encoding`
+      + Character encoding to use for multipart parsing.
+      + Overrides the encoding specified in the request.
+      + If not specified, uses the encoding specified in a part named
+        \"_charset_\", or the content type for each part, or request character
+        encoding if the part has no encoding, or \"UTF-8\" if no request
+        character encoding is set.
+
+  - `:fallback-encoding`
+      + Specifies the character encoding used in parsing if a part of the
+        request does not specify encoding in its content type or no part named
+        \"_charset_\" is present.
+      + Has no effect if `:encoding` is also set.
+
+  - `:store`
+      + A function that stores a file upload. The function should expect a map
+        with `:filename`, `:content-type` and `:stream` keys, and its return
+        value will be used as the value for the parameter in the multipart
+        parameter map.
+      + The default storage function is the `temp-file-store`.
+
+  - `:progress-fn`
+      + A function that gets called during uploads. The function should expect
+        four parameters: `request`, `bytes-read`, `content-length`, and
+        `item-count`.
+  "
+  (as-request-fn `multipart-params-request multipart-params/multipart-params-request
+                 {:tags [::multipart-params-request]}))
+
+;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+
+(def ^{:arglists '([& {:as options}])}
+  nested-params-request
+  "Middleware to converts a flat map of parameters into a nested map.
+  Accepts the following options:
+
+  - `:key-parser` – the function to use to parse the parameter names into a list
+                    of keys. Keys that are empty strings are treated as elements
+                    in a vector, non-empty keys are treated as elements in a
+                    map. Defaults to the `parse-nested-keys` function.
+
+  For example:
+
+      {\"foo[bar]\" \"baz\"}
+      => {\"foo\" {\"bar\" \"baz\"}}
+
+      {\"foo[]\" \"bar\"}
+      => {\"foo\" [\"bar\"]}
+  "
+  (as-request-fn `nested-params-request nested-params/nested-params-request
+                 {:tags [::nested-params-request]}))
+
+;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+
+(def ^{:arglists '([& {:as options}])}
   keyword-params-request
   "Middleware that converts any string keys in the :params map to keywords.
   Only keys that can be turned into valid keywords are converted.
@@ -100,12 +170,9 @@
 
   - `:parse-namespaces?` – if true, parse the parameters into namespaced
                            keywords (defaults to false)
-
-  Requires [[params-request]].
   "
   (as-request-fn `keyword-params-request keyword-params/keyword-params-request
-                 {:tags [::keyword-params-request]
-                  :requires {:request [`params-request]}}))
+                 {:tags [::keyword-params-request]}))
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
@@ -124,6 +191,16 @@
   "
   (as-response-fn `content-type-response content-type/content-type-response
                   {:tags [::content-type-response]}))
+
+;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+
+(def ^{:arglists '([])}
+  not-modified-response
+  "Middleware that returns a 304 Not Modified from the wrapped handler if the
+  handler response has an `ETag` or `Last-Modified` header, and the request has
+  a `If-None-Match` or `If-Modified-Since` header that matches the response."
+  (as-response-fn `not-modified-response (without-options not-modified/not-modified-response)
+                  {:tags [::not-modified-response]}))
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
@@ -217,5 +294,58 @@
   (as-handler-fn `wrap-flash (without-options flash/wrap-flash)
                  {:tags [::wrap-flash]
                   :requires {:request [`wrap-session]}}))
+
+;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+
+(def ^{:arglists '([{:as options}])}
+  wrap-file
+  "Wrap a handler such that the directory at the given `:root-path` is checked
+  for a static file with which to respond to the request, proxying the request
+  to the wrapped handler if such a file does not exist.
+
+  Accepts the following options:
+
+  - `:root-path`
+  - `:index-files?`    – look for index.* files in directories, defaults to true
+  - `:allow-symlinks?` – serve files through symbolic links, defaults to false
+  - `:prefer-handler?` – prioritize handler response over files, defaults to
+                         false
+  "
+  (as-handler-fn `wrap-file (fn [handler {:as options :keys [root-path]}]
+                              (file/wrap-file handler root-path options))
+                 {:tags [::wrap-file]
+                  :requires {:request [`wrap-file]}}))
+
+;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+
+(def ^{:arglists '([{:as options}])}
+  wrap-resource
+  "Middleware that first checks to see whether the request map matches a static
+  resource. If it does, the resource is returned in a response map, otherwise
+  the request map is passed onto the handler. The `:root-path` argument will be
+  added to the beginning of the resource path.
+
+  Accepts the following options:
+
+  - `:root-path`
+  - `:loader`          – resolve the resource using this class loader
+  - `:allow-symlinks?` – allow symlinks that lead to paths outside the root
+                         classpath directories (defaults to false)
+  - `:prefer-handler?` – prioritize handler response over resources (defaults to
+                         false)
+  "
+  (as-handler-fn `wrap-resource (fn [handler {:as options :keys [root-path]}]
+                                  (resource/wrap-resource handler root-path options))
+                 {:tags [::wrap-resource]
+                  :requires {:request [`wrap-resource]}}))
+
+;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+
+(def ^{:arglists '([])}
+  wrap-head
+  "Middleware that turns any HEAD request into a GET, and then sets the response
+  body to `nil`."
+  (as-handler-fn `wrap-head (without-options head/wrap-head)
+                 {:tags [::wrap-head]}))
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,

@@ -38,7 +38,9 @@
                                         (:response flow-items))
                                 (distinct)
                                 (keep (fn [x]
-                                        (when-let [required (config/required x)]
+                                        (when-let [required (-> (config/required x)
+                                                                (select-keys [:request :response])
+                                                                (not-empty))]
                                           [(config/type-tag x) required]))))
             [group req-seq] required
             req-tag,,,,,,,, req-seq
