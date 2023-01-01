@@ -205,7 +205,7 @@
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
 (def ^{:arglists '([& {:as options}])}
-  wrap-cookies
+  cookies-handler
   "Parses the cookies in the request map, then assocs the resulting map
   to the :cookies key on the request.
 
@@ -240,13 +240,13 @@
   - `:same-site` – set to `:strict` or `:lax` to set SameSite attribute of the
                    cookie
   "
-  (as-handler-fn `wrap-cookies cookies/wrap-cookies
-                 {:tags [::wrap-cookies]}))
+  (as-handler-fn `cookies-handler cookies/wrap-cookies
+                 {:tags [::cookies-handler]}))
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
 (def ^{:arglists '([& {:as options}])}
-  wrap-session
+  session-handler
   "Reads in the current HTTP session map, and adds it to the `:session` key on
   the request. If a `:session` key is added to the response by the handler, the
   session is updated with the new value. If the value is nil, the session is
@@ -275,30 +275,30 @@
       + Defaults to `{:http-only true}`. This may be overridden on a
         per-response basis by adding `:session-cookie-attrs` to the response.
 
-  NOTE: Includes [[wrap-cookies]] behaviour.
+  NOTE: Includes [[cookies-handler]] behaviour.
   "
-  (as-handler-fn `wrap-session session/wrap-session
-                 {:tags [::wrap-session]}))
+  (as-handler-fn `session-handler session/wrap-session
+                 {:tags [::session-handler]}))
 
-;; `wrap-session` includes `wrap-cookies`
-(derive `wrap-session `wrap-cookies)
+;; `session-handler` includes `cookies-handler`
+(derive `session-handler `cookies-handler)
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
 (def ^{:arglists '([])}
-  wrap-flash
+  flash-handler
   "If a `:flash` key is set on the response by the handler, a `:flash` key with
   the same value will be set on the next request that shares the same session.
   This is useful for small messages that persist across redirects. Requires
-  [[wrap-session]]."
-  (as-handler-fn `wrap-flash (without-options flash/wrap-flash)
-                 {:tags [::wrap-flash]
-                  :requires {:request [`wrap-session]}}))
+  [[session-handler]]."
+  (as-handler-fn `flash-handler (without-options flash/wrap-flash)
+                 {:tags [::flash-handler]
+                  :requires {:request [`session-handler]}}))
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
 (def ^{:arglists '([{:as options}])}
-  wrap-file
+  file-handler
   "Wrap a handler such that the directory at the given `:root-path` is checked
   for a static file with which to respond to the request, proxying the request
   to the wrapped handler if such a file does not exist.
@@ -311,15 +311,15 @@
   - `:prefer-handler?` – prioritize handler response over files, defaults to
                          false
   "
-  (as-handler-fn `wrap-file (fn [handler {:as options :keys [root-path]}]
-                              (file/wrap-file handler root-path options))
-                 {:tags [::wrap-file]
-                  :requires {:request [`wrap-file]}}))
+  (as-handler-fn `file-handler (fn [handler {:as options :keys [root-path]}]
+                                 (file/wrap-file handler root-path options))
+                 {:tags [::file-handler]
+                  :requires {:request [`file-handler]}}))
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
 (def ^{:arglists '([{:as options}])}
-  wrap-resource
+  resource-handler
   "Middleware that first checks to see whether the request map matches a static
   resource. If it does, the resource is returned in a response map, otherwise
   the request map is passed onto the handler. The `:root-path` argument will be
@@ -334,18 +334,18 @@
   - `:prefer-handler?` – prioritize handler response over resources (defaults to
                          false)
   "
-  (as-handler-fn `wrap-resource (fn [handler {:as options :keys [root-path]}]
-                                  (resource/wrap-resource handler root-path options))
-                 {:tags [::wrap-resource]
-                  :requires {:request [`wrap-resource]}}))
+  (as-handler-fn `resource-handler (fn [handler {:as options :keys [root-path]}]
+                                     (resource/wrap-resource handler root-path options))
+                 {:tags [::resource-handler]
+                  :requires {:request [`resource-handler]}}))
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
 (def ^{:arglists '([])}
-  wrap-head
+  head-handler
   "Middleware that turns any HEAD request into a GET, and then sets the response
   body to `nil`."
-  (as-handler-fn `wrap-head (without-options head/wrap-head)
-                 {:tags [::wrap-head]}))
+  (as-handler-fn `head-handler (without-options head/wrap-head)
+                 {:tags [::head-handler]}))
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,

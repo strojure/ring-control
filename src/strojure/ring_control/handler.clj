@@ -140,8 +140,8 @@
   usage of ring middlewares.
 
   The wraps should be tagged with symbols (and optionally with convenient type
-  tags) using [[config/as-wrap-handler]], [[config/as-wrap-request]],
-  [[config/as-wrap-response]] to be referred in configuration:
+  tags) using [[config/as-handler-fn]], [[config/as-request-fn]],
+  [[config/as-response-fn]] to be referred in configuration:
 
       {:enter [`enter1
                `enter2

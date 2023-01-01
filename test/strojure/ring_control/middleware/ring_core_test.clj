@@ -159,11 +159,11 @@
 (deftest wrap-cookies-t
   (test/are [expr] expr
 
-    (-> (test {:outer [ring/wrap-cookies]})
+    (-> (test {:outer [ring/cookies-handler]})
         :request
         (contains? :cookies))
 
-    (-> (test {:outer [ring/wrap-cookies]})
+    (-> (test {:outer [ring/cookies-handler]})
         :headers
         (get "Set-Cookie")
         (first)
@@ -176,11 +176,11 @@
 (deftest wrap-session-t
   (test/are [expr] expr
 
-    (-> (test {:outer [ring/wrap-session]})
+    (-> (test {:outer [ring/session-handler]})
         :request
         (contains? :session))
 
-    (-> (test {:outer [ring/wrap-session]})
+    (-> (test {:outer [ring/session-handler]})
         :headers
         (contains? "Set-Cookie"))
 
@@ -191,32 +191,32 @@
 (deftest wrap-flash-t
   (test/are [expr] (-> expr :request (contains? :flash))
 
-    (test {:outer [ring/wrap-session
-                   ring/wrap-flash]})
+    (test {:outer [ring/session-handler
+                   ring/flash-handler]})
 
-    (test {:inner [ring/wrap-session
-                   ring/wrap-flash]})
+    (test {:inner [ring/session-handler
+                   ring/flash-handler]})
 
-    (test {:outer [ring/wrap-session]
-           :inner [ring/wrap-flash]})
+    (test {:outer [ring/session-handler]
+           :inner [ring/flash-handler]})
 
     )
   (test/are [expr] (thrown-with-msg? Exception #"(?i)missing" expr)
 
-    (test {:outer [ring/wrap-flash]})
-    (test {:inner [ring/wrap-flash]})
+    (test {:outer [ring/flash-handler]})
+    (test {:inner [ring/flash-handler]})
 
     )
   (test/are [expr] (thrown-with-msg? Exception #"(?i)misplaced" expr)
 
-    (test {:outer [ring/wrap-flash
-                   ring/wrap-session]})
+    (test {:outer [ring/flash-handler
+                   ring/session-handler]})
 
-    (test {:inner [ring/wrap-flash
-                   ring/wrap-session]})
+    (test {:inner [ring/flash-handler
+                   ring/session-handler]})
 
-    (test {:outer [ring/wrap-flash]
-           :inner [ring/wrap-session]})
+    (test {:outer [ring/flash-handler]
+           :inner [ring/session-handler]})
 
     ))
 
