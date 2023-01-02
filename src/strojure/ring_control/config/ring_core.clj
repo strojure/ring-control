@@ -1,6 +1,6 @@
 (ns strojure.ring-control.config.ring-core
-  "Builder configuration functions for the middlewares from the
-  `ring.middleware` namespace in `ring-core`."
+  "Configuration functions for the middlewares from the `ring.middleware`
+  namespace in `ring/ring-core` package."
   (:require [ring.middleware.content-type :as content-type]
             [ring.middleware.cookies :as cookies]
             [ring.middleware.file :as file]
@@ -73,11 +73,10 @@
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
-(def ^{:arglists '([& {:as options}])}
+(def ^{:arglists '([& {:keys [encoding]}])}
   params-request
-  "Middleware to parse urlencoded parameters from the query string and form
-  body (if the request is an url-encoded form). Adds the following keys to
-  the request map:
+  "Parses urlencoded parameters from the query string and form body (if the
+  request is an url-encoded form). Adds the following keys to the request map:
 
   - `:query-params` – a map of parameters from the query string
   - `:form-params`  – a map of parameters from the body
@@ -94,10 +93,10 @@
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
-(def ^{:arglists '([& {:as options}])}
+(def ^{:arglists '([& {:keys [encoding, fallback-encoding, store, progress-fn]}])}
   multipart-params-request
-  "Middleware to parse multipart parameters from a request. Adds the
-  following keys to the request map:
+  "Parses multipart parameters from a request. Adds the following keys to the
+  request map:
 
   - `:multipart-params` - a map of multipart parameters
   - `:params`           - a merged map of all types of parameter
@@ -135,10 +134,10 @@
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
-(def ^{:arglists '([& {:as options}])}
+(def ^{:arglists '([& {:keys [key-parser]}])}
   nested-params-request
-  "Middleware to converts a flat map of parameters into a nested map.
-  Accepts the following options:
+  "Converts a flat map of parameters into a nested map. Accepts the following
+  options:
 
   - `:key-parser` – the function to use to parse the parameter names into a list
                     of keys. Keys that are empty strings are treated as elements
@@ -158,10 +157,10 @@
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
-(def ^{:arglists '([& {:as options}])}
+(def ^{:arglists '([& {:keys [parse-namespaces?]}])}
   keyword-params-request
-  "Middleware that converts any string keys in the :params map to keywords.
-  Only keys that can be turned into valid keywords are converted.
+  "Converts any string keys in the `:params` map to keywords. Only keys that can
+  be turned into valid keywords are converted.
 
   This middleware does not alter the maps under `:*-params` keys. These are left
   as strings.
@@ -176,12 +175,12 @@
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
-(def ^{:arglists '([& {:as options}])}
+(def ^{:arglists '([& {:keys [mime-types]}])}
   content-type-response
-  "Middleware that adds a content-type header to the response if one is not
-  set by the handler. Uses the `ring.util.mime-type/ext-mime-type` function to
-  guess the content-type from the file extension in the URI. If no
-  content-type can be found, it defaults to 'application/octet-stream'.
+  "Adds a `content-type` header to the response if one is not set by the
+  handler. Uses the `ring.util.mime-type/ext-mime-type` function to guess the
+  content-type from the file extension in the URI. If no content-type can be
+  found, it defaults to 'application/octet-stream'.
 
   Accepts the following options:
 
@@ -196,18 +195,18 @@
 
 (def ^{:arglists '([])}
   not-modified-response
-  "Middleware that returns a 304 Not Modified from the wrapped handler if the
-  handler response has an `ETag` or `Last-Modified` header, and the request has
-  a `If-None-Match` or `If-Modified-Since` header that matches the response."
+  "Returns a `304 Not Modified` from the wrapped handler if the handler response
+  has an `ETag` or `Last-Modified` header, and the request has a `If-None-Match`
+  or `If-Modified-Since` header that matches the response."
   (as-response-fn `not-modified-response (without-options not-modified/not-modified-response)
                   {:tags [::not-modified-response]}))
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
-(def ^{:arglists '([& {:as options}])}
+(def ^{:arglists '([& {:keys [decoder, encoder]}])}
   cookies-handler
   "Parses the cookies in the request map, then assocs the resulting map
-  to the :cookies key on the request.
+  to the `:cookies` key on the request.
 
   Accepts the following options:
 
@@ -245,7 +244,7 @@
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
-(def ^{:arglists '([& {:as options}])}
+(def ^{:arglists '([& {:keys [store, root, cookie-name, cookie-attrs]}])}
   session-handler
   "Reads in the current HTTP session map, and adds it to the `:session` key on
   the request. If a `:session` key is added to the response by the handler, the
@@ -297,7 +296,7 @@
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
-(def ^{:arglists '([{:as options}])}
+(def ^{:arglists '([& {:keys [root-path, index-files?, allow-symlinks?, prefer-handler?]}])}
   file-handler
   "Wrap a handler such that the directory at the given `:root-path` is checked
   for a static file with which to respond to the request, proxying the request
@@ -318,7 +317,7 @@
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
-(def ^{:arglists '([{:as options}])}
+(def ^{:arglists '([& {:keys [root-path, loader, allow-symlinks?, prefer-handler?]}])}
   resource-handler
   "Middleware that first checks to see whether the request map matches a static
   resource. If it does, the resource is returned in a response map, otherwise
