@@ -78,7 +78,7 @@ We can also define dependency of `` `enter2 `` on `` `enter1 `` using
                         :ignore-required [`enter1]})
 ```
 
-See also [more sophisticated example](doc/usage/walkthrough.clj).
+See also [walkthrough](doc/usage/walkthrough.clj).
 
 ---
 

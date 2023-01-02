@@ -1,6 +1,6 @@
-(ns strojure.ring-control.middleware.ring-core
+(ns strojure.ring-control.config.ring-core
   "Builder configuration functions for the middlewares from the
-  `ring.middleware` namespace."
+  `ring.middleware` namespace in `ring-core`."
   (:require [ring.middleware.content-type :as content-type]
             [ring.middleware.cookies :as cookies]
             [ring.middleware.file :as file]
