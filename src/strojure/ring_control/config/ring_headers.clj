@@ -47,6 +47,53 @@
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
+(def ^{:arglists '([& {:keys [frame-options]}])}
+  frame-options-response
+  "Adds the X-Frame-Options header to the response. This governs whether your
+  site can be rendered in a <frame>, <iframe> or <object>, and is typically used
+  to prevent clickjacking attacks.
+
+  The following `:frame-options` values are allowed:
+
+  - `:deny`             – prevent any framing of the content
+  - `:sameorigin`       – allow only the current site to frame the content
+  - `{:allow-from uri}` – allow only the specified URI to frame the page
+
+  The `:deny` and `:sameorigin` options are keywords, while the `:allow-from`
+  option is a map consisting of one key/value pair.
+
+  Note that browser support for `:allow-from` is incomplete. See:
+  https://developer.mozilla.org/en-US/docs/Web/HTTP/X-Frame-Options
+  "
+  (ring/as-response-fn `frame-options-response
+                       (fn [response _ {:keys [frame-options]}]
+                         (assert (or (= frame-options :deny)
+                                     (= frame-options :sameorigin)
+                                     (#'x-headers/allow-from? frame-options)))
+                         (x-headers/frame-options-response response frame-options))
+                       {:tags [::frame-options-response]}))
+
+;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+
+(def ^{:arglists '([& {:keys [content-type-options]}])}
+  content-type-options-response
+  "Adds the `X-Content-Type-Options` header to the response. This currently only
+  accepts one option:
+
+  - `:nosniff – prevent resources with invalid media types being loaded as
+                stylesheets or scripts
+
+  This prevents attacks based around media type confusion. See:
+  http://msdn.microsoft.com/en-us/library/ie/gg622941(v=vs.85).aspx
+  "
+  (ring/as-response-fn `content-type-options-response
+                       (fn [response _ {:keys [content-type-options]}]
+                         (assert (= content-type-options :nosniff))
+                         (x-headers/content-type-options-response response content-type-options))
+                       {:tags [::content-type-options-response]}))
+
+;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+
 (def ^{:arglists '([& {:keys [enable? mode]}])}
   xss-protection-response
   "Add the `X-XSS-Protection` header to the response. This header enables a
