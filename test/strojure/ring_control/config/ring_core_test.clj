@@ -156,7 +156,7 @@
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
-(deftest wrap-cookies-t
+(deftest cookies-handler-t
   (test/are [expr] expr
 
     (-> (test {:outer [ring/cookies-handler]})
@@ -173,7 +173,7 @@
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
-(deftest wrap-session-t
+(deftest session-handler-t
   (test/are [expr] expr
 
     (-> (test {:outer [ring/session-handler]})
@@ -188,7 +188,7 @@
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
-(deftest wrap-flash-t
+(deftest flash-handler-t
   (test/are [expr] (-> expr :request (contains? :flash))
 
     (test {:outer [ring/session-handler
