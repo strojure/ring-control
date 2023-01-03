@@ -12,158 +12,98 @@
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
-(defn- test [config]
-  (let [handler (-> (fn [request] {:request request
-                                   :cookies {:a 1}
-                                   :session {:sess/a 1}
-                                   :flash ::flash})
-                    (handler/build config))]
-    (handler {:uri "/index.html"
-              :query-string "a=1&ns/b=2&foo[]=bar"})))
+(defn- test
+  ([config request] (test config request {}))
+  ([config request response]
+   (let [handler (-> (fn [request] (assoc response :request request))
+                     (handler/build2 config))]
+     (handler request))))
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
-(deftest params-request-t
+(deftest request-params-t
   (testing "`params` without options"
     (test/are [expr]
               (= "1" (-> expr :request :params (get "a")))
 
-      (test {:enter [(ring/params-request)]})
-      (test {:enter [ring/params-request]})
-      (test {:enter [`ring/params-request]})
-      (test {:enter [::ring/params-request]})
-      (test {:enter [{:type ring/params-request}]})
-      (test {:enter [{:type `ring/params-request}]})
-      (test {:enter [{:type ::ring/params-request}]})
-
-      ))
-  (testing "`params` with :encoding"
-    (test/are [expr]
-              (= "1" (-> expr :request :params (get "a")))
-
-      (test {:enter [(ring/params-request {:encoding "UTF-8"})]})
-      (test {:enter [(ring/params-request :encoding "UTF-8")]})
-      (test {:enter [{:type ring/params-request :encoding "UTF-8"}]})
-      (test {:enter [{:type `ring/params-request :encoding "UTF-8"}]})
-      (test {:enter [{:type ::ring/params-request :encoding "UTF-8"}]})
-
-      ))
-  (testing "`params` in wrong group"
-    (test/are [expr]
-              (thrown? Exception expr)
-
-      (test {:leave [(ring/params-request)]})
-      (test {:leave [ring/params-request]})
-      (test {:leave [`ring/params-request]})
-      (test {:leave [::ring/params-request]})
-      (test {:outer [(ring/params-request)]})
-      (test {:outer [ring/params-request]})
-      (test {:outer [`ring/params-request]})
-      (test {:outer [::ring/params-request]})
+      (test [(handler/wrap-request [(ring/request-params)])]
+            {:query-string "a=1"})
 
       )))
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
-(deftest keyword-params-request-t
+(deftest request-keyword-params-t
 
   (testing "`keyword-params` without options"
     (test/are [expr]
               (= "1" (-> expr :request :params :a))
 
-      (test {:enter [(ring/params-request)
-                     (ring/keyword-params-request)]})
-
-      (test {:enter [ring/params-request
-                     ring/keyword-params-request]})
-
-      (test {:enter [`ring/params-request
-                     `ring/keyword-params-request]})
-
-      (test {:enter [::ring/params-request
-                     ::ring/keyword-params-request]})
-
-      (test {:enter [{:type ring/params-request}
-                     {:type ring/keyword-params-request}]})
-
-      (test {:enter [{:type `ring/params-request}
-                     {:type `ring/keyword-params-request}]})
-
-      (test {:enter [{:type ::ring/params-request}
-                     {:type ::ring/keyword-params-request}]})
+      (test [(handler/wrap-request [(ring/request-params)
+                                    (ring/request-keyword-params)])]
+            {:query-string "a=1"})
 
       ))
-
   (testing "`keyword-params` with `:parse-namespaces?` true"
     (test/are [expr]
-              (= "2" (-> expr :request :params :ns/b))
+              (= "1" (-> expr :request :params :ns/a))
 
-      (test {:enter [(ring/params-request)
-                     (ring/keyword-params-request {:parse-namespaces? true})]})
+      (test [(handler/wrap-request [(ring/request-params)
+                                    (ring/request-keyword-params :parse-namespaces? true)])]
+            {:query-string "ns/a=1"})
 
-      (test {:enter [(ring/params-request)
-                     (ring/keyword-params-request :parse-namespaces? true)]})
-
-      (test {:enter [{:type ring/params-request}
-                     {:type ring/keyword-params-request :parse-namespaces? true}]})
-
-      (test {:enter [{:type `ring/params-request}
-                     {:type `ring/keyword-params-request :parse-namespaces? true}]})
-
-      (test {:enter [{:type ::ring/params-request}
-                     {:type ::ring/keyword-params-request :parse-namespaces? true}]})
+      (test [(handler/wrap-request [(ring/request-params)
+                                    (ring/request-keyword-params {:parse-namespaces? true})])]
+            {:query-string "ns/a=1"})
 
       ))
   )
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
-(deftest multipart-params-request-t
+(deftest request-multipart-params-t
   (test/are [expr]
             (-> expr :request (contains? :multipart-params))
 
-    (test {:enter [(ring/multipart-params-request)]})
+    (test [(handler/wrap-request [(ring/request-multipart-params)])]
+          {})
 
     ))
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
-(deftest nested-params-request-t
+(deftest request-nested-params-t
   (test/are [expr]
             (= ["bar"] (-> expr :request :params (get "foo")))
 
-    (test {:enter [(ring/params-request)
-                   (ring/nested-params-request)]})
+    (test [(handler/wrap-request [(ring/request-params)
+                                  (ring/request-nested-params)])]
+          {:query-string "foo[]=bar"})
 
     ))
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
-(deftest content-type-response-t
+(deftest response-content-type-t
   (testing "`content-type-response` without options"
     (test/are [expr]
               (= "text/html" (-> expr :headers (get "Content-Type")))
 
-      (test {:leave [(ring/content-type-response)]})
-      (test {:leave [ring/content-type-response]})
-      (test {:leave [`ring/content-type-response]})
-      (test {:leave [::ring/content-type-response]})
-      (test {:leave [{:type ring/content-type-response}]})
-      (test {:leave [{:type `ring/content-type-response}]})
-      (test {:leave [{:type ::ring/content-type-response}]})
+      (test [(handler/wrap-response [(ring/response-content-type)])]
+            {:uri "/index.html"})
 
       )))
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
-(deftest cookies-handler-t
+(deftest wrap-cookies-t
   (test/are [expr] expr
 
-    (-> (test {:outer [ring/cookies-handler]})
+    (-> (test [(ring/wrap-cookies)] {})
         :request
         (contains? :cookies))
 
-    (-> (test {:outer [ring/cookies-handler]})
+    (-> (test [(ring/wrap-cookies)] {} {:cookies {:a 1}})
         :headers
         (get "Set-Cookie")
         (first)
@@ -173,14 +113,14 @@
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
-(deftest session-handler-t
+(deftest wrap-session-t
   (test/are [expr] expr
 
-    (-> (test {:outer [ring/session-handler]})
+    (-> (test [(ring/wrap-session)] {})
         :request
         (contains? :session))
 
-    (-> (test {:outer [ring/session-handler]})
+    (-> (test [(ring/wrap-session)] {} {:session {:a 1}})
         :headers
         (contains? "Set-Cookie"))
 
@@ -188,35 +128,12 @@
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
-(deftest flash-handler-t
+(deftest wrap-flash-t
   (test/are [expr] (-> expr :request (contains? :flash))
 
-    (test {:outer [ring/session-handler
-                   ring/flash-handler]})
-
-    (test {:inner [ring/session-handler
-                   ring/flash-handler]})
-
-    (test {:outer [ring/session-handler]
-           :inner [ring/flash-handler]})
-
-    )
-  (test/are [expr] (thrown-with-msg? Exception #"(?i)missing" expr)
-
-    (test {:outer [ring/flash-handler]})
-    (test {:inner [ring/flash-handler]})
-
-    )
-  (test/are [expr] (thrown-with-msg? Exception #"(?i)misplaced" expr)
-
-    (test {:outer [ring/flash-handler
-                   ring/session-handler]})
-
-    (test {:inner [ring/flash-handler
-                   ring/session-handler]})
-
-    (test {:outer [ring/flash-handler]
-           :inner [ring/session-handler]})
+    (test [(ring/wrap-session)
+           (ring/wrap-flash)]
+          {})
 
     ))
 

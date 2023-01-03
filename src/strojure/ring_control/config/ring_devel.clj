@@ -14,12 +14,11 @@
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
 (def ^{:arglists '([])}
-  lint-handler
+  wrap-lint
   "Wrap a handler to validate incoming requests and outgoing responses
   according to the current Ring specification. An exception is raised if either
   the request or response is invalid."
-  (ring/as-handler-fn `lint-handler (ring/without-options lint/wrap-lint)
-                      {:tags [::lint-handler]}))
+  (constantly lint/wrap-lint))
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
@@ -38,8 +37,7 @@
       + If true, keep attempting to reload namespaces that have compile errors.
       + Defaults to `true`.
   "
-  (ring/as-handler-fn `reload-handler reload/wrap-reload
-                      {:tags [::reload-handler]}))
+  (ring/with-options reload/wrap-reload))
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
@@ -53,7 +51,6 @@
 
   - `:color?` – if true, apply ANSI colors to terminal stacktrace (default false)
   "
-  (ring/as-handler-fn `stacktrace-handler stacktrace/wrap-stacktrace
-                      {:tags [::stacktrace-handler]}))
+  (ring/with-options stacktrace/wrap-stacktrace))
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,

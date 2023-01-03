@@ -40,15 +40,42 @@
   {:arglists '([obj])}
   type-tag)
 
+(defn fn-from-map
+  [obj, with-options-fn]
+  (if (map? obj)
+    (let [f (or (-> obj :type)
+                (-> obj meta :type)
+                (throw (ex-info (str "No `:type` in map: " obj)
+                                {:map obj :meta (meta obj)})))
+          options (not-empty (dissoc obj :type))]
+      (cond-> f
+        options (with-options-fn options)))
+    obj))
+
+(defn handler-fn2
+  [obj]
+  (fn-from-map obj (fn [f options]
+                     (fn [handler] (f handler options)))))
+
 (defmulti request-fn
   "Returns function `(fn [request] new-request)` for the object."
   {:arglists '([obj])}
   type-tag)
 
+(defn request-fn2
+  [obj]
+  (fn-from-map obj (fn [f options]
+                     (fn [request] (f request options)))))
+
 (defmulti response-fn
   "Returns function `(fn [response request] new-response)` for the object."
   {:arglists '([obj])}
   type-tag)
+
+(defn response-fn2
+  [obj]
+  (fn-from-map obj (fn [f options]
+                     (fn [response request] (f response request options)))))
 
 (defmulti required
   "Returns configuration `{:keys [request response]}` where keys contains

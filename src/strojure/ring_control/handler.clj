@@ -107,9 +107,75 @@
                 (fn [resp] (respond (response-fn resp request)))
                 raise)))))
 
+(defn wrap-request
+  ([fs]
+   (when-let [request-fn (some->> (reverse fs)
+                                (keep config/request-fn2)
+                                (not-empty)
+                                (reduce (fn [f ff]
+                                          (fn [request]
+                                            (f (ff request))))))]
+     (fn [handler]
+       (fn
+         ([request]
+          (handler (request-fn request)))
+         ([request respond raise]
+          (handler (request-fn request) respond raise))))))
+  ([handler fs]
+   (if-let [request-fn (some->> (reverse fs)
+                                (keep config/request-fn2)
+                                (not-empty)
+                                (reduce (fn [f ff]
+                                          (fn [request]
+                                            (f (ff request))))))]
+     (fn
+       ([request]
+        (handler (request-fn request)))
+       ([request respond raise]
+        (handler (request-fn request) respond raise)))
+     handler)))
+
+(defn wrap-response
+  ([fs]
+   (let [response-fn (some->> (reverse fs)
+                              (keep config/response-fn2)
+                              (not-empty)
+                              (reduce (fn [f ff]
+                                        (fn [response request]
+                                          (f (ff response request) request)))))]
+     (fn [handler]
+       (fn
+         ([request]
+          (response-fn (handler request) request))
+         ([request respond raise]
+          (handler request
+                   (fn [resp] (respond (response-fn resp request)))
+                   raise))))))
+  ([handler fs]
+   (let [response-fn (some->> (reverse fs)
+                              (keep config/response-fn2)
+                              (not-empty)
+                              (reduce (fn [f ff]
+                                        (fn [response request]
+                                          (f (ff response request) request)))))]
+     (fn
+       ([request]
+        (response-fn (handler request) request))
+       ([request respond raise]
+        (handler request
+                 (fn [resp] (respond (response-fn resp request)))
+                 raise))))))
+
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
-(defn build
+(defn build2
+  [handler wraps]
+  (->> (reverse wraps)
+       (keep config/handler-fn2)
+       (reduce (fn [handler ff] (ff handler))
+               handler)))
+
+(defn ^:deprecated build
   "Returns ring handler applying configuration options:
 
   - `:outer` – A sequence of standard ring middlewares to wrap handler before
