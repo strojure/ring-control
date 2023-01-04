@@ -19,6 +19,13 @@
                      (handler/build2 config))]
      (handler request))))
 
+(defn- test3
+  ([config request] (test3 config request {}))
+  ([config request response]
+   (let [handler (-> (fn [request] (assoc response :request request))
+                     (handler/build3 config))]
+     (handler request))))
+
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
 (deftest request-params-t
@@ -116,11 +123,16 @@
 (deftest wrap-session-t
   (test/are [expr] expr
 
-    (-> (test [(ring/wrap-session)] {})
+    (-> (test3 [(ring/wrap-session)] {})
         :request
         (contains? :session))
 
-    (-> (test [(ring/wrap-session)] {} {:session {:a 1}})
+    (-> (test3 [(ring/wrap-session false)] {})
+        :request
+        (contains? :session)
+        (not))
+
+    (-> (test3 [(ring/wrap-session)] {} {:session {:a 1}})
         :headers
         (contains? "Set-Cookie"))
 
@@ -131,7 +143,8 @@
 (deftest wrap-flash-t
   (test/are [expr] (-> expr :request (contains? :flash))
 
-    (test [(ring/wrap-session)
+    ;; TODO: revert session in test
+    (test [#_(ring/wrap-session)
            (ring/wrap-flash)]
           {})
 

@@ -110,11 +110,11 @@
 (defn wrap-request
   ([fs]
    (when-let [request-fn (some->> (reverse fs)
-                                (keep config/request-fn2)
-                                (not-empty)
-                                (reduce (fn [f ff]
-                                          (fn [request]
-                                            (f (ff request))))))]
+                                  (keep config/request-fn2)
+                                  (not-empty)
+                                  (reduce (fn [f ff]
+                                            (fn [request]
+                                              (f (ff request))))))]
      (fn [handler]
        (fn
          ([request]
@@ -174,6 +174,85 @@
        (keep config/handler-fn2)
        (reduce (fn [handler ff] (ff handler))
                handler)))
+
+(defmulti wrap3 (fn [_handler [k _xs]] k))
+
+(defmethod wrap3 :wrap
+  [handler [_ xs]]
+  (->> xs (reduce (fn [handler ff] (ff handler))
+                  handler)))
+
+(defmethod wrap3 :around
+  [handler [_ xs]]
+  (let [request-fn (when-let [fs (->> (reverse xs)
+                                      (into [] (keep (fn [[k f]] (when (= :enter k) f))))
+                                      (not-empty))]
+                     (fn [request]
+                       (->> fs (reduce (fn [request f] (f request)) request))))
+        response-fn (when-let [fs (->> xs
+                                       (into [] (keep (fn [[k f]] (when (= :leave k) f))))
+                                       (not-empty))]
+                      (fn [response request]
+                        (->> fs (reduce (fn [response f] (f response request)) response))))]
+    (cond
+      (and request-fn response-fn)
+      (fn
+        ([request]
+         (response-fn (handler (request-fn request)) request))
+        ([request respond raise]
+         (let [request (request-fn request)]
+           (handler request
+                    (fn [resp] (respond (response-fn resp request)))
+                    raise))))
+      request-fn
+      (fn
+        ([request]
+         (handler (request-fn request)))
+        ([request respond raise]
+         (handler (request-fn request) respond raise)))
+      response-fn
+      (fn
+        ([request]
+         (response-fn (handler request) request))
+        ([request respond raise]
+         (handler request
+                  (fn [resp] (respond (response-fn resp request)))
+                  raise))))))
+
+(defn build3-decompose
+  [xs]
+  (->> (reverse xs)
+       (mapcat (fn [{:keys [wrap enter leave]}]
+                 (cond-> []
+                   wrap, (conj [:wrap wrap])
+                   enter (conj [:enter enter])
+                   leave (conj [:leave leave])
+                   )))
+       (partition-by (comp #{:wrap} first))
+       (map (fn [xs] (case (ffirst xs) :wrap,,,,,,,,,, [:wrap (map second xs)]
+                                       (:enter :leave) [:around xs])))))
+
+(defn build3 [handler middlewares]
+  (->> (build3-decompose middlewares)
+       (reduce wrap3 handler)))
+
+(comment
+  (build3-decompose [{:wrap :wrap1}
+                     {:wrap :wrap2 :enter :wrap2}
+                     nil
+                     {:enter :enter1}
+                     {:enter :enter2}
+                     nil
+                     {:enter :enter3}
+                     {:leave :leave1 :enter :leave1}
+                     {:enter :enter4}
+                     nil
+                     {:leave :leave2}
+                     {:leave :leave3}
+                     nil
+                     {:wrap :wrap3}
+                     {:wrap :wrap4}])
+  )
 
 (defn ^:deprecated build
   "Returns ring handler applying configuration options:

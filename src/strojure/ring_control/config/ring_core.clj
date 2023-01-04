@@ -195,7 +195,7 @@
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
-(def ^{:arglists '([& {:keys [store, root, cookie-name, cookie-attrs]}])}
+(defn ^{:arglists '([& {:keys [store, root, cookie-name, cookie-attrs]}])}
   wrap-session
   "Returns handler wrapper map to read in the current HTTP session map, and add
   it to the `:session` key on the request. If a `:session` key is added to the
@@ -227,7 +227,11 @@
 
   NOTE: Includes [[cookies-handler]] behaviour.
   "
-  (with-options session/wrap-session))
+  [& {:as options}]
+  (when-not (false? options)
+    (let [options (#'session/session-options (or options {}))]
+      {:enter (fn session-request [request] (session/session-request request options))
+       :leave (fn session-response [response request] (session/session-response response request options))})))
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
