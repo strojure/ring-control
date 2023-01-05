@@ -16,14 +16,7 @@
   ([config request] (test config request {}))
   ([config request response]
    (let [handler (-> (fn [request] (assoc response :request request))
-                     (handler/build2 config))]
-     (handler request))))
-
-(defn- test3
-  ([config request] (test3 config request {}))
-  ([config request response]
-   (let [handler (-> (fn [request] (assoc response :request request))
-                     (handler/build3 config))]
+                     (handler/wrap config))]
      (handler request))))
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
@@ -33,7 +26,7 @@
     (test/are [expr]
               (= "1" (-> expr :request :params (get "a")))
 
-      (test [(handler/wrap-request [(ring/request-params)])]
+      (test [(ring/request-params)]
             {:query-string "a=1"})
 
       )))
@@ -46,8 +39,8 @@
     (test/are [expr]
               (= "1" (-> expr :request :params :a))
 
-      (test [(handler/wrap-request [(ring/request-params)
-                                    (ring/request-keyword-params)])]
+      (test [(ring/request-params)
+             (ring/request-keyword-params)]
             {:query-string "a=1"})
 
       ))
@@ -55,12 +48,12 @@
     (test/are [expr]
               (= "1" (-> expr :request :params :ns/a))
 
-      (test [(handler/wrap-request [(ring/request-params)
-                                    (ring/request-keyword-params :parse-namespaces? true)])]
+      (test [(ring/request-params)
+             (ring/request-keyword-params :parse-namespaces? true)]
             {:query-string "ns/a=1"})
 
-      (test [(handler/wrap-request [(ring/request-params)
-                                    (ring/request-keyword-params {:parse-namespaces? true})])]
+      (test [(ring/request-params)
+             (ring/request-keyword-params {:parse-namespaces? true})]
             {:query-string "ns/a=1"})
 
       ))
@@ -72,7 +65,7 @@
   (test/are [expr]
             (-> expr :request (contains? :multipart-params))
 
-    (test [(handler/wrap-request [(ring/request-multipart-params)])]
+    (test [(ring/request-multipart-params)]
           {})
 
     ))
@@ -83,8 +76,8 @@
   (test/are [expr]
             (= ["bar"] (-> expr :request :params (get "foo")))
 
-    (test [(handler/wrap-request [(ring/request-params)
-                                  (ring/request-nested-params)])]
+    (test [(ring/request-params)
+           (ring/request-nested-params)]
           {:query-string "foo[]=bar"})
 
     ))
@@ -96,7 +89,7 @@
     (test/are [expr]
               (= "text/html" (-> expr :headers (get "Content-Type")))
 
-      (test [(handler/wrap-response [(ring/response-content-type)])]
+      (test [(ring/response-content-type)]
             {:uri "/index.html"})
 
       )))
@@ -123,16 +116,16 @@
 (deftest wrap-session-t
   (test/are [expr] expr
 
-    (-> (test3 [(ring/wrap-session)] {})
+    (-> (test [(ring/wrap-session)] {})
         :request
         (contains? :session))
 
-    (-> (test3 [(ring/wrap-session false)] {})
+    (-> (test [(ring/wrap-session false)] {})
         :request
         (contains? :session)
         (not))
 
-    (-> (test3 [(ring/wrap-session)] {} {:session {:a 1}})
+    (-> (test [(ring/wrap-session)] {} {:session {:a 1}})
         :headers
         (contains? "Set-Cookie"))
 
@@ -143,8 +136,7 @@
 (deftest wrap-flash-t
   (test/are [expr] (-> expr :request (contains? :flash))
 
-    ;; TODO: revert session in test
-    (test [#_(ring/wrap-session)
+    (test [(ring/wrap-session)
            (ring/wrap-flash)]
           {})
 

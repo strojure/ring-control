@@ -4,31 +4,34 @@
 
   NOTE: Requires `ring/ring-ssl` to be added in project dependencies.
   "
-  (:require [ring.middleware.ssl :as ssl]
-            [strojure.ring-control.config.ring-core :as ring]))
+  (:require [ring.middleware.ssl :as ssl]))
 
 (set! *warn-on-reflection* true)
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
-(def ^{:arglists '([& {:keys [header]}])}
-  request-forwarded-scheme
-  "Returns request function map to change the `:scheme` of the request to the
-  value present in a request header. This is useful if your application sits
-  behind a reverse proxy or load balancer that handles the SSL transport.
+(defn request-forwarded-scheme
+  "Middleware that changes the `:scheme` of the request to the value present in
+  a request header. This is useful if your application sits behind a reverse
+  proxy or load balancer that handles the SSL transport.
 
-  The `:header` option defaults to `x-forwarded-proto`.
+  The `header` defaults to `x-forwarded-proto`.
   "
-  (ring/with-options (fn request-forwarded-scheme [request & {:keys [header]}]
-                       (ssl/forwarded-scheme-request request (or header ssl/default-scheme-header)))))
+  {:arglists '([] [header] [false])}
+  [& {:as header}]
+  (when-not (false? header)
+    (let [header (if (string? header)
+                   header
+                   (:header header ssl/default-scheme-header))]
+      {:name `request-forwarded-scheme
+       :enter (fn [request] (ssl/forwarded-scheme-request request header))})))
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
-(def ^{:arglists '([& {:keys [max-age, include-subdomains?]}])}
-  response-hsts
-  "Returns response function map to add the `Strict-Transport-Security` header
-  to the response. This ensures the browser will only use HTTPS for future
-  requests to the domain.
+(defn response-hsts
+  "Middleware that adds the `Strict-Transport-Security` header to the response.
+  This ensures the browser will only use HTTPS for future requests to the
+  domain.
 
   Accepts the following options:
 
@@ -40,19 +43,28 @@
 
   See RFC 6797 for more information (https://tools.ietf.org/html/rfc6797).
   "
-  (ring/with-options ssl/hsts-response))
+  {:arglists '([& {:keys [max-age, include-subdomains?]}]
+               [false])}
+  [& {:as options}]
+  (when-not (false? options)
+    (let [options (or options {})]
+      {:name `response-hsts
+       :leave (fn [response _] (ssl/hsts-response response options))})))
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
-(def ^{:arglists '([& {:keys [ssl-port]}])}
-  wrap-ssl-redirect
-  "Returns handler wrapper map to redirect any HTTP request to the equivalent
-  HTTPS URL.
+(defn wrap-ssl-redirect
+  "Middleware that redirects any HTTP request to the equivalent HTTPS URL.
 
   Accepts the following options:
 
   - `:ssl-port` – the SSL port to use for redirects, defaults to 443.
   "
-  (ring/with-options ssl/wrap-ssl-redirect))
+  {:arglists '([& {:keys [ssl-port]}])}
+  [& {:as options}]
+  (when-not (false? options)
+    (let [options (or options {})]
+      {:name `wrap-ssl-redirect
+       :wrap (fn [handler] (ssl/wrap-ssl-redirect handler options))})))
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,

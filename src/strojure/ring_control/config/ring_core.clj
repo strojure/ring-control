@@ -12,27 +12,16 @@
             [ring.middleware.not-modified :as not-modified]
             [ring.middleware.params :as params]
             [ring.middleware.resource :as resource]
-            [ring.middleware.session :as session]
-            [strojure.ring-control.config :as config]))
+            [ring.middleware.session :as session]))
 
 (set! *warn-on-reflection* true)
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
-(defn with-options
-  [f]
-  (fn [& {:as options}]
-    (when-not (false? options)
-      (-> (if (map? options) options {})
-          (assoc :type f)))))
-
-;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
-
-(def ^{:arglists '([& {:keys [encoding]}])}
-  request-params
-  "Returns request function map to parse urlencoded parameters from the query
-  string and form body (if the request is an url-encoded form). Adds the
-  following keys to the request map:
+(defn request-params
+  "Middleware to parse urlencoded parameters from the query string and form body
+  (if the request is an url-encoded form). Adds the following keys to the
+  request map:
 
   - `:query-params` – a map of parameters from the query string
   - `:form-params`  – a map of parameters from the body
@@ -44,14 +33,20 @@
                   the request character encoding, or \"UTF-8\" if no request
                   character encoding is set.
   "
-  (with-options params/params-request))
+  {:arglists '([& {:keys [encoding]}]
+               [false])}
+  [& {:as options}]
+  (when-not (false? options)
+    (let [options (or options {})]
+      {:name `request-params
+       :enter (fn enter [request]
+                (params/params-request request options))})))
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
-(def ^{:arglists '([& {:keys [encoding, fallback-encoding, store, progress-fn]}])}
-  request-multipart-params
-  "Returns request function map to parses multipart parameters from a request.
-  Adds the following keys to the request map:
+(defn request-multipart-params
+  "Middleware to parse multipart parameters from a request. Adds the following
+  keys to the request map:
 
   - `:multipart-params` - a map of multipart parameters
   - `:params`           - a merged map of all types of parameter
@@ -84,14 +79,20 @@
         four parameters: `request`, `bytes-read`, `content-length`, and
         `item-count`.
   "
-  (with-options multipart-params/multipart-params-request))
+  {:arglists '([& {:keys [encoding, fallback-encoding, store, progress-fn]}]
+               [false])}
+  [& {:as options}]
+  (when-not (false? options)
+    (let [options (or options {})]
+      {:name `request-multipart-params
+       :enter (fn enter [request]
+                (multipart-params/multipart-params-request request options))})))
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
-(def ^{:arglists '([& {:keys [key-parser]}])}
-  request-nested-params
-  "Returns request function map to convert a flat map of parameters into a
-  nested map. Accepts the following options:
+(defn request-nested-params
+  "Middleware to convert a flat map of parameters into a nested map. Accepts the
+  following options:
 
   - `:key-parser` – the function to use to parse the parameter names into a list
                     of keys. Keys that are empty strings are treated as elements
@@ -106,15 +107,20 @@
       {\"foo[]\" \"bar\"}
       => {\"foo\" [\"bar\"]}
   "
-  (with-options nested-params/nested-params-request))
+  {:arglists '([& {:keys [key-parser]}]
+               [false])}
+  [& {:as options}]
+  (when-not (false? options)
+    (let [options (or options {})]
+      {:name `request-nested-params
+       :enter (fn enter [request]
+                (nested-params/nested-params-request request options))})))
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
-
-(def ^{:arglists '([& {:keys [parse-namespaces?]}])}
-  request-keyword-params
-  "Returns request function map to convert any string keys in the `:params` map
-  to keywords. Only keys that can be turned into valid keywords are converted.
+(defn request-keyword-params
+  "Middleware that converts any string keys in the `:params` map to keywords.
+  Only keys that can be turned into valid keywords are converted.
 
   This middleware does not alter the maps under `:*-params` keys. These are left
   as strings.
@@ -124,16 +130,22 @@
   - `:parse-namespaces?` – if true, parse the parameters into namespaced
                            keywords (defaults to false)
   "
-  (with-options keyword-params/keyword-params-request))
+  {:arglists '([& {:keys [parse-namespaces?]}]
+               [false])}
+  [& {:as options}]
+  (when-not (false? options)
+    (let [options (or options {})]
+      {:name `request-keyword-params
+       :enter (fn enter [request]
+                (keyword-params/keyword-params-request request options))})))
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
-(def ^{:arglists '([& {:keys [mime-types]}])}
-  response-content-type
-  "Returns response function map to add a `content-type` header to the response
-  if one is not set by the handler. Uses the `ring.util.mime-type/ext-mime-type`
-  function to guess the content-type from the file extension in the URI. If no
-  content-type can be found, it defaults to 'application/octet-stream'.
+(defn response-content-type
+  "Middleware that adds a `content-type` header to the response if one is not
+  set by the handler. Uses the `ring.util.mime-type/ext-mime-type` function to
+  guess the content-type from the file extension in the URI. If no content-type
+  can be found, it defaults to 'application/octet-stream'.
 
   Accepts the following options:
 
@@ -141,24 +153,32 @@
                     used in addition to the ones defined in
                     `ring.util.mime-type/default-mime-types`
   "
-  (with-options content-type/content-type-response))
+  {:arglists '([& {:keys [mime-types]}]
+               [false])}
+  [& {:as options}]
+  (when-not (false? options)
+    (let [options (or options {})]
+      {:name `response-content-type
+       :leave (fn leave [response request]
+                (content-type/content-type-response response request options))})))
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
-(def ^{:arglists '([])}
-  response-not-modified
-  "Returns response function map to return a `304 Not Modified` from the
-  wrapped handler if the handler response has an `ETag` or `Last-Modified`
-  header, and the request has a `If-None-Match` or `If-Modified-Since` header
-  that matches the response."
-  (with-options not-modified/not-modified-response))
+(defn response-not-modified
+  "Middleware that returns a `304 Not Modified` from the wrapped handler if the
+  handler response has an `ETag` or `Last-Modified` header, and the request has
+  a `If-None-Match` or `If-Modified-Since` header that matches the response."
+  {:arglists '([] [false])}
+  [& {:as options}]
+  (when-not (false? options)
+    {:name `response-not-modified
+     :leave not-modified/not-modified-response}))
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
-(def ^{:arglists '([& {:keys [decoder, encoder]}])}
-  wrap-cookies
-  "Returns handler wrapper map to parse the cookies in the request map, then
-  assoc the resulting map to the `:cookies` key on the request.
+(defn wrap-cookies
+  "Parses the cookies in the request map, then assoc the resulting map to the
+  `:cookies` key on the request.
 
   Accepts the following options:
 
@@ -191,16 +211,20 @@
   - `:same-site` – set to `:strict` or `:lax` to set SameSite attribute of the
                    cookie
   "
-  (with-options cookies/wrap-cookies))
+  {:arglists '([& {:keys [decoder, encoder]}])}
+  [& {:as options}]
+  (when-not (false? options)
+    {:name `wrap-cookies
+     :enter (fn enter [request] (cookies/cookies-request request options))
+     :leave (fn leave [response _] (cookies/cookies-response response options))}))
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
-(defn ^{:arglists '([& {:keys [store, root, cookie-name, cookie-attrs]}])}
-  wrap-session
-  "Returns handler wrapper map to read in the current HTTP session map, and add
-  it to the `:session` key on the request. If a `:session` key is added to the
-  response by the handler, the session is updated with the new value. If the
-  value is nil, the session is deleted.
+(defn wrap-session
+  "Reads in the current HTTP session map, and add it to the `:session` key on
+  the request. If a `:session` key is added to the response by the handler, the
+  session is updated with the new value. If the value is nil, the session is
+  deleted.
 
   Accepts the following options:
 
@@ -225,72 +249,87 @@
       + Defaults to `{:http-only true}`. This may be overridden on a
         per-response basis by adding `:session-cookie-attrs` to the response.
 
-  NOTE: Includes [[cookies-handler]] behaviour.
+  NOTE: Includes [[cookies]] behaviour.
   "
+  {:arglists '([& {:keys [store, root, cookie-name, cookie-attrs]}]
+               [false])}
   [& {:as options}]
   (when-not (false? options)
     (let [options (#'session/session-options (or options {}))]
-      {:enter (fn session-request [request] (session/session-request request options))
-       :leave (fn session-response [response request] (session/session-response response request options))})))
+      {:name `wrap-session
+       :enter (fn enter [request] (session/session-request request options))
+       :leave (fn leave [response request] (session/session-response response request options))})))
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
-(def ^{:arglists '([])}
-  wrap-flash
-  "Returns handler wrapper map. If a `:flash` key is set on the response by the
-  handler, a `:flash` key with the same value will be set on the next request
-  that shares the same session. This is useful for small messages that persist
-  across redirects.."
-  (with-options flash/wrap-flash))
+(defn wrap-flash
+  "If a `:flash` key is set on the response by the handler, a `:flash` key with
+  the same value will be set on the next request that shares the same session.
+  This is useful for small messages that persist
+  across redirects."
+  {:arglists '([] [false])}
+  [& {:as options}]
+  (when-not (false? options)
+    {:name `wrap-flash
+     :enter flash/flash-request
+     :leave flash/flash-response}))
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
-(def ^{:arglists '([& {:keys [root-path, index-files?, allow-symlinks?, prefer-handler?]}])}
-  file-handler
-  "Returns handler wrapper map to wrap a handler such that the directory at the
-  given `:root-path` is checked for a static file with which to respond to the
-  request, proxying the request to the wrapped handler if such a file does not
-  exist.
+(defn wrap-file
+  "Wrap a handler such that the directory at the given `root-path` is checked
+  for a static file with which to respond to the request, proxying the request
+  to the wrapped handler if such a file does not exist.
 
   Accepts the following options:
 
-  - `:root-path`
   - `:index-files?`    – look for index.* files in directories, defaults to true
   - `:allow-symlinks?` – serve files through symbolic links, defaults to false
   - `:prefer-handler?` – prioritize handler response over files, defaults to
                          false
   "
-  (with-options (fn [handler {:as options :keys [root-path]}]
-                  (file/wrap-file handler root-path options))))
+  {:arglists '([root-path & {:keys [index-files?, allow-symlinks?, prefer-handler?]}]
+               [false])}
+  [root-path & {:as options}]
+  (when root-path
+    (let [options (or options {})]
+      {:name `wrap-file
+       :wrap (fn [handler] (file/wrap-file handler root-path options))})))
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
-(def ^{:arglists '([& {:keys [root-path, loader, allow-symlinks?, prefer-handler?]}])}
-  resource-handler
-  ;; TODO: docstring
+(defn wrap-resource
   "Middleware that first checks to see whether the request map matches a static
   resource. If it does, the resource is returned in a response map, otherwise
-  the request map is passed onto the handler. The `:root-path` argument will be
+  the request map is passed onto the handler. The `root-path` argument will be
   added to the beginning of the resource path.
 
   Accepts the following options:
 
-  - `:root-path`
   - `:loader`          – resolve the resource using this class loader
   - `:allow-symlinks?` – allow symlinks that lead to paths outside the root
                          classpath directories (defaults to false)
   - `:prefer-handler?` – prioritize handler response over resources (defaults to
                          false)
   "
-  (with-options (fn [handler {:as options :keys [root-path]}]
-                  (resource/wrap-resource handler root-path options))))
+  {:arglists '([root-path & {:keys [loader, allow-symlinks?, prefer-handler?]}]
+               [false])}
+  [root-path & {:as options}]
+  (when root-path
+    (let [options (or options {})]
+      {:name `wrap-resource
+       :wrap (fn [handler] (resource/wrap-resource handler root-path options))})))
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
-(def ^{:arglists '([])}
-  head-handler
-  "Returns handler wrapper map to turn any HEAD request into a GET, and then
-  sets the response body to `nil`."
-  (with-options head/wrap-head))
+(defn wrap-head
+  "Middleware that turns any HEAD request into a GET, and then sets the response
+  body to `nil`."
+  {:arglists '([] [false])}
+  [& {:as options}]
+  (when-not (false? options)
+    {:name `wrap-head
+     :enter head/head-request
+     :leave head/head-response}))
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,

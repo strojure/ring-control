@@ -11,27 +11,34 @@
 
 (defn ring-defaults
   [{:keys [proxy security responses static cookies params session]}]
-  (->> [(handler/wrap-request [(headers/request-forwarded-remote-addr (boolean proxy))
-                               (ssl/request-forwarded-scheme,,,,, (boolean proxy))])
-        (ssl/wrap-ssl-redirect (:ssl-redirect security false))
-        (handler/wrap-response [(ring/response-content-type,,,,,,, (:content-types responses false))
-                                (headers/response-default-charset,,,,, (:default-charset responses false))
-                                (ring/response-not-modified,,,,,,, (:not-modified-responses responses false))
-                                (headers/response-xss-protection,,,,,, (:xss-protection security false))
-                                (headers/response-frame-options,,,,,,, (:frame-options security false))
-                                (headers/response-content-type-options (:content-type-options security false))
-                                (ssl/response-hsts,,,,,,,,,,,,,,,, (:hsts security false))])
+  (->> [(headers/request-forwarded-remote-addr (boolean proxy))
+        (ssl/request-forwarded-scheme,,,,,,,,, (boolean proxy))
+
+        (ssl/wrap-ssl-redirect,,,,,,,,,,,,,,,, (-> security (:ssl-redirect false)))
+        (ssl/response-hsts,,,,,,,,,,,,,,,,,,,, (-> security (:hsts false)))
+        (headers/response-content-type-options (-> security (:content-type-options false)))
+        (headers/response-frame-options,,,,,,, (-> security (:frame-options false)))
+        (headers/response-xss-protection,,,,,, (-> security (:xss-protection false)))
+
+        (ring/response-not-modified,,,,,,,,, (-> responses (:not-modified-responses false)))
+        (headers/response-default-charset,,, (-> responses (:default-charset false)))
+        (ring/response-content-type,,,,,,,,, (-> responses (:content-types false)))
+
         ;; TODO: wrap files
         ;; TODO: wrap resources
-        (handler/wrap-response [(headers/response-absolute-redirects,, (:absolute-redirects responses false))])
+
+        (headers/response-absolute-redirects (-> responses (:absolute-redirects false)))
+
         (ring/wrap-cookies (or cookies false))
-        (handler/wrap-request [(ring/request-params,,,,,,,,,, (:urlencoded params false))
-                               (ring/request-multipart-params (:multipart params false))
-                               (ring/request-nested-params,,, (:nested params false))
-                               (ring/request-keyword-params,, (:keywordize params false))])
-        (ring/wrap-session (or session false))
-        (ring/wrap-flash (:flash session false))
-        (anti/wrap-anti-forgery (:anti-forgery security false))]
+        (ring/request-params,,,,,,,,,, (-> params (:urlencoded false)))
+        (ring/request-multipart-params (-> params (:multipart false)))
+        (ring/request-nested-params,,, (-> params (:nested false)))
+        (ring/request-keyword-params,, (-> params (:keywordize false)))
+
+        (ring/wrap-session (-> session (or false)))
+        (ring/wrap-flash,, (-> session (:flash false)))
+
+        (anti/wrap-anti-forgery (-> security (:anti-forgery false)))]
        (filterv some?)))
 
 (ring-defaults {:proxy true :security {:ssl-redirect true} :cookies true
@@ -69,7 +76,7 @@
                      :absolute-redirects true
                      :content-types true
                      :default-charset "utf-8"}})
-(def -h (handler/build2 identity (ring-defaults -c)))
-(-h {:scheme :http :uri "/index.html" :request-method :get :headers {"host" "localhost"}})
+(def -h (handler/wrap identity (ring-defaults -c)))
+(-h {:scheme :https :uri "/index.html" :request-method :get :headers {"host" "localhost"}})
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
