@@ -18,67 +18,44 @@ middlewares:
 
 ## Usage
 
-Ring handlers are build from handler function and builder configuration using
-[handler/build][handler_build] function.
+### Building handlers
 
-Configuration options:
+Ring handlers are build from handler function and sequence of middleware
+configurations using [handler/build][handler_build] function.
 
-- `:outer` – A sequence of standard ring middlewares to wrap handler before all
-  other wraps.
-- `:enter` – A sequence of Ring request functions `(fn [request] new-request)`.
-- `:leave` – A sequence of Ring response
-  functions `(fn [response request] new-response)`. The function receives
-  same `request` as wrapping handler itself.
-- `:inner` – A sequence of standard ring middlewares to wrap the `handler`
-  after `:enter` and before `:leave` wraps.
+Default type of ring handler is sync handler. To produce async ring handler
+use either `:async` option or `{:async true}` in handler's meta.
 
-The wraps are applying in direct order:
+Every middleware configuration is a map with keys:
 
-```clojure
-;; Applies enter1 before enter2.
-{:enter [`enter1
-         `enter2]}
-```
+- `{:keys [wrap]}`
 
-Configuration groups are applied as they are listed above:
+  - `:wrap`  – a function `(fn [handler] new-handler)` to wrap handler.
 
-- Request flow:
-    - `:outer` −> `:enter` −> `:inner` −> handler.
-- Response flow:
-    - handler −> `:inner` −> `:leave` −> `:outer`.
+- `{:keys [enter leave]}`
 
-Such configuration allows to distinguish between request/response only wraps,
-control order of application more easy and naturally comparing with standard
-usage of ring middlewares.
+  - `:enter` — a function `(fn [request] new-request)` to transform request.
+  - `:leave` – a function `(fn [response request] new-response)` to transform
+    response.
 
-The wraps should be tagged with symbols (and optionally with convenient type
-tags) using `config/as-wrap-handler`, `config/set-request-fn`,
-`config/as-wrap-response` functions to be referred in configuration:
+Maps with `:wrap` and `:enter`/`:leave` causes exception.
 
-```clojure
-{:enter [`enter1
-         `enter2
-         {:type `enter3 :opt1 true :opt2 false}]}
-```
+Only middlewares with `:wrap` can short-circuit, `:enter`/`:leave` just modify
+request/response.
 
-We can also define dependency of `` `enter2 `` on `` `enter1 `` using
-`config/set-required` function:
+The middlewares are applied in the order:
 
-```clojure
-(config/set-required `enter2 {:request [`enter1]})
-
-;; This fails with exception about missing dependency:
-(handler/build handler {:enter [`enter2]})
-
-;; This fails with exception about wrong order:
-(handler/build handler {:enter [`enter2 `enter1]})
-
-;; But this succeeds anyway:
-(handler/build handler {:enter [`enter2]
-                        :ignore-required [`enter1]})
-```
+- Request flows from first to last.
+- Response flows from last to first.
+- Every middleware receives request from *previous* `:wrap`/`:enter`
+  middlewares only.
+- Every `:leave`/`:wrap` receives response from *next* middlewares.
 
 See also [walkthrough](doc/usage/walkthrough.clj).
+
+### Ring middlewares
+
+TODO
 
 ---
 
