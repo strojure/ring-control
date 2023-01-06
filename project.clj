@@ -14,6 +14,7 @@
                                        [ring/ring-ssl "0.3.0"]
                                        ;; required for `ring.middleware.multipart-params`
                                        [javax.servlet/javax.servlet-api "4.0.1"]]}
-             :dev,,,,, {:source-paths ["doc"]}}
+             :dev,,,,, {:dependencies [[ring/ring-defaults "0.3.4"]]
+                        :source-paths ["doc"]}}
 
   :deploy-repositories [["clojars" {:url "https://clojars.org/repo" :sign-releases false}]])

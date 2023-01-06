@@ -533,6 +533,7 @@
     (when root-path
       (let [options (or options {})]
         {:name `wrap-file
+         :meta {:root-path root-path}
          :wrap (fn [handler] (wrap-fn handler root-path options))}))))
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
@@ -561,6 +562,7 @@
     (when root-path
       (let [options (or options {})]
         {:name `wrap-resource
+         :meta {:root-path root-path}
          :wrap (fn [handler] (wrap-fn handler root-path options))}))))
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
