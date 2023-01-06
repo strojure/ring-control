@@ -110,7 +110,7 @@
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
 (defn- map->wrap
-  [{:keys [wrap enter leave] :as m}]
+  [async? {:keys [wrap enter leave] :as m}]
   (when m
     (cond wrap
           (do (when (or enter leave)
@@ -120,37 +120,45 @@
           (fn [handler]
             (cond
               (and enter leave)
-              (fn
-                ([request]
-                 (let [request (enter request)]
-                   (leave (handler request) request)))
-                ([request respond raise]
-                 (let [request (enter request)]
-                   (handler request
-                            (fn [resp] (respond (leave resp request)))
-                            raise))))
+              (if async? (fn async-handler
+                           [request respond raise]
+                           (let [request (enter request)]
+                             (handler request
+                                      (fn [resp] (respond (leave resp request)))
+                                      raise)))
+                         (fn sync-handler
+                           [request]
+                           (let [request (enter request)]
+                             (leave (handler request) request))))
               enter
-              (fn
-                ([request]
-                 (handler (enter request)))
-                ([request respond raise]
-                 (handler (enter request) respond raise)))
+              (if async? (fn async-handler
+                           [request respond raise]
+                           (handler (enter request) respond raise))
+                         (fn sync-handler
+                           [request]
+                           (handler (enter request))))
               leave
-              (fn
-                ([request]
-                 (leave (handler request) request))
-                ([request respond raise]
-                 (handler request
-                          (fn [resp] (respond (leave resp request)))
-                          raise)))))
+              (if async? (fn async-handler
+                           [request respond raise]
+                           (handler request
+                                    (fn [resp] (respond (leave resp request)))
+                                    raise))
+                         (fn sync-handler
+                           [request]
+                           (leave (handler request) request)))))
           :else
           (throw (ex-info (str "Require :wrap/:enter/:leave key in " m) m)))))
 
-(defn wrap [handler xs]
-  (->> xs
-       (keep map->wrap)
-       (reverse)
-       (reduce (fn [handler wrapper] (wrapper handler)) handler)))
+(defn wrap
+  ([handler xs] (wrap handler xs {}))
+  ([handler xs options]
+   (let [async? (:async options (-> handler meta :async))
+         handler (->> xs
+                      (keep (partial map->wrap async?))
+                      (reverse)
+                      (reduce (fn [handler wrapper] (wrapper handler))
+                              handler))]
+     (-> handler (vary-meta assoc :async async?)))))
 
 (defn ^:deprecated build
   "Returns ring handler applying configuration options:

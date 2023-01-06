@@ -19,6 +19,18 @@
                      (handler/wrap config))]
      (handler request))))
 
+(defn- test-async
+  ([config request] (test config request {}))
+  ([config request response]
+   (let [handler (-> ^:async (fn [request respond _]
+                               (respond (assoc response :request request)))
+                     (handler/wrap config))
+         response! (promise)]
+     (handler request
+              (fn [response] (deliver response! response))
+              (fn [e] (throw e)))
+     @response!)))
+
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
 (deftest request-params-t
@@ -28,6 +40,9 @@
 
       (test [(ring/request-params)]
             {:query-string "a=1"})
+
+      (test-async [(ring/request-params)]
+                  {:query-string "a=1"})
 
       )))
 
@@ -42,6 +57,10 @@
       (test [(ring/request-params)
              (ring/request-keyword-params)]
             {:query-string "a=1"})
+
+      (test-async [(ring/request-params)
+                   (ring/request-keyword-params)]
+                  {:query-string "a=1"})
 
       ))
   (testing "`keyword-params` with `:parse-namespaces?` true"
