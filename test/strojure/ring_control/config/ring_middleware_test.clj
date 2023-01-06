@@ -16,7 +16,7 @@
   ([config request] (test config request {}))
   ([config request response]
    (let [handler (-> (fn [request] (assoc response :request request))
-                     (handler/wrap config))]
+                     (handler/build config))]
      (handler request))))
 
 (defn- test-async
@@ -24,7 +24,7 @@
   ([config request response]
    (let [handler (-> ^:async (fn [request respond _]
                                (respond (assoc response :request request)))
-                     (handler/wrap config))
+                     (handler/build config))
          response! (promise)]
      (handler request
               (fn [response] (deliver response! response))

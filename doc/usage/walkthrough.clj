@@ -68,14 +68,14 @@
 
 ;; - :enter before :leave
 
-(let [handler (handler/wrap handler* [{:wrap wrap1}
-                                      {:wrap wrap2}
-                                      {:enter request1}
-                                      {:enter request2}
-                                      {:leave response1}
-                                      {:leave response2}
-                                      {:wrap wrap3}
-                                      {:wrap wrap4}])]
+(let [handler (handler/build handler* [{:wrap wrap1}
+                                       {:wrap wrap2}
+                                       {:enter request1}
+                                       {:enter request2}
+                                       {:leave response1}
+                                       {:leave response2}
+                                       {:wrap wrap3}
+                                       {:wrap wrap4}])]
   (handler {:trace/enter []}))
 
 ;:enter wrap1 {:request #:trace{:enter []}}
@@ -97,14 +97,14 @@
 
 ;; - :leave before :enter
 
-(let [handler (handler/wrap handler* [{:wrap wrap1}
-                                      {:wrap wrap2}
-                                      {:leave response1}
-                                      {:leave response2}
-                                      {:enter request1}
-                                      {:enter request2}
-                                      {:wrap wrap3}
-                                      {:wrap wrap4}])]
+(let [handler (handler/build handler* [{:wrap wrap1}
+                                       {:wrap wrap2}
+                                       {:leave response1}
+                                       {:leave response2}
+                                       {:enter request1}
+                                       {:enter request2}
+                                       {:wrap wrap3}
+                                       {:wrap wrap4}])]
   (handler {:trace/enter []}))
 
 ;:enter wrap1 {:request #:trace{:enter []}}

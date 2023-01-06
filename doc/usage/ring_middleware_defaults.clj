@@ -22,7 +22,7 @@
 
 (defn handle-request
   [config request]
-  ((handler/wrap -handler config) request))
+  ((handler/build -handler config) request))
 
 (-> (defaults/config ring-defaults/api-defaults)
     (handle-request -request))
