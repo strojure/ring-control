@@ -1,8 +1,5 @@
 (ns usage.ring-defaults
-  (:require [strojure.ring-control.config.ring-anti-forgery :as anti]
-            [strojure.ring-control.config.ring-core :as ring]
-            [strojure.ring-control.config.ring-headers :as headers]
-            [strojure.ring-control.config.ring-ssl :as ssl]
+  (:require [strojure.ring-control.config.ring-middleware :as ring]
             [strojure.ring-control.handler :as handler]))
 
 (set! *warn-on-reflection* true)
@@ -11,23 +8,23 @@
 
 (defn ring-defaults
   [{:keys [proxy security responses static cookies params session]}]
-  (->> [(headers/request-forwarded-remote-addr (boolean proxy))
-        (ssl/request-forwarded-scheme,,,,,,,,, (boolean proxy))
+  (->> [(ring/request-forwarded-remote-addr (boolean proxy))
+        (ring/request-forwarded-scheme,,,,,,,,, (boolean proxy))
 
-        (ssl/wrap-ssl-redirect,,,,,,,,,,,,,,,, (-> security (:ssl-redirect false)))
-        (ssl/response-hsts,,,,,,,,,,,,,,,,,,,, (-> security (:hsts false)))
-        (headers/response-content-type-options (-> security (:content-type-options false)))
-        (headers/response-frame-options,,,,,,, (-> security (:frame-options false)))
-        (headers/response-xss-protection,,,,,, (-> security (:xss-protection false)))
+        (ring/wrap-ssl-redirect,,,,,,,,,,,, (-> security (:ssl-redirect false)))
+        (ring/response-hsts,,,,,,,,,,,,,,,, (-> security (:hsts false)))
+        (ring/response-content-type-options (-> security (:content-type-options false)))
+        (ring/response-frame-options,,,,,,, (-> security (:frame-options false)))
+        (ring/response-xss-protection,,,,,, (-> security (:xss-protection false)))
 
-        (ring/response-not-modified,,,,,,,,, (-> responses (:not-modified-responses false)))
-        (headers/response-default-charset,,, (-> responses (:default-charset false)))
-        (ring/response-content-type,,,,,,,,, (-> responses (:content-types false)))
+        (ring/response-not-modified,,,,,, (-> responses (:not-modified-responses false)))
+        (ring/response-default-charset,,, (-> responses (:default-charset false)))
+        (ring/response-content-type,,,,,, (-> responses (:content-types false)))
 
         ;; TODO: wrap files
         ;; TODO: wrap resources
 
-        (headers/response-absolute-redirects (-> responses (:absolute-redirects false)))
+        (ring/response-absolute-redirects (-> responses (:absolute-redirects false)))
 
         (ring/wrap-cookies (or cookies false))
         (ring/request-params,,,,,,,,,, (-> params (:urlencoded false)))
@@ -38,7 +35,7 @@
         (ring/wrap-session (-> session (or false)))
         (ring/wrap-flash,, (-> session (:flash false)))
 
-        (anti/wrap-anti-forgery (-> security (:anti-forgery false)))]
+        (ring/wrap-anti-forgery (-> security (:anti-forgery false)))]
        (filterv some?)))
 
 (ring-defaults {:proxy true :security {:ssl-redirect true} :cookies true
