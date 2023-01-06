@@ -28,11 +28,11 @@
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
-(declare request-params)                          ; ring/ring-core
+(declare req-params)                              ; ring/ring-core
 
 (when-let [[request-fn] (resolve* 'ring.middleware.params/params-request)]
 
-  (defn request-params
+  (defn req-params
     "Middleware to parse urlencoded parameters from the query string and form body
     (if the request is an url-encoded form). Adds the following keys to the
     request map:
@@ -52,16 +52,16 @@
     [& {:as options}]
     (when-not (false? options)
       (let [options (or options {})]
-        {:name `request-params
+        {:name `req-params
          :enter (fn enter [request] (request-fn request options))}))))
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
-(declare request-multipart-params)                ; ring/ring-core
+(declare req-multipart-params)                    ; ring/ring-core
 
 (when-let [[request-fn] (resolve* 'ring.middleware.multipart-params/multipart-params-request)]
 
-  (defn request-multipart-params
+  (defn req-multipart-params
     "Middleware to parse multipart parameters from a request. Adds the following
     keys to the request map:
 
@@ -101,16 +101,16 @@
     [& {:as options}]
     (when-not (false? options)
       (let [options (or options {})]
-        {:name `request-multipart-params
+        {:name `req-multipart-params
          :enter (fn enter [request] (request-fn request options))}))))
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
-(declare request-nested-params)                   ; ring/ring-core
+(declare req-nested-params)                       ; ring/ring-core
 
 (when-let [[request-fn] (resolve* 'ring.middleware.nested-params/nested-params-request)]
 
-  (defn request-nested-params
+  (defn req-nested-params
     "Middleware to convert a flat map of parameters into a nested map. Accepts the
     following options:
 
@@ -132,16 +132,16 @@
     [& {:as options}]
     (when-not (false? options)
       (let [options (or options {})]
-        {:name `request-nested-params
+        {:name `req-nested-params
          :enter (fn enter [request] (request-fn request options))}))))
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
-(declare request-keyword-params)                  ; ring/ring-core
+(declare req-keyword-params)                      ; ring/ring-core
 
 (when-let [[request-fn] (resolve* 'ring.middleware.keyword-params/keyword-params-request)]
 
-  (defn request-keyword-params
+  (defn req-keyword-params
     "Middleware that converts any string keys in the `:params` map to keywords.
     Only keys that can be turned into valid keywords are converted.
 
@@ -158,32 +158,32 @@
     [& {:as options}]
     (when-not (false? options)
       (let [options (or options {})]
-        {:name `request-keyword-params
+        {:name `req-keyword-params
          :enter (fn enter [request] (request-fn request options))}))))
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
-(declare request-forwarded-remote-addr)           ; ring/ring-headers
+(declare req-forwarded-remote-addr)               ; ring/ring-headers
 
 (when-let [[request-fn] (resolve* 'ring.middleware.proxy-headers/forwarded-remote-addr-request)]
 
-  (defn request-forwarded-remote-addr
+  (defn req-forwarded-remote-addr
     "Middleware that changes the `:remote-addr` key of the request map to the last
     value present in the `X-Forwarded-For` header."
     {:arglists '([] [false])}
     [& {:as options}]
     (when-not (false? options)
-      {:name `request-forwarded-remote-addr
+      {:name `req-forwarded-remote-addr
        :enter request-fn})))
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
-(declare request-forwarded-scheme)                ; ring/ring-ssl
+(declare req-forwarded-scheme)                    ; ring/ring-ssl
 
 (when-let [[request-fn default-header] (resolve* 'ring.middleware.ssl/forwarded-scheme-request
                                                  'ring.middleware.ssl/default-scheme-header)]
 
-  (defn request-forwarded-scheme
+  (defn req-forwarded-scheme
     "Middleware that changes the `:scheme` of the request to the value present in
     a request header. This is useful if your application sits behind a reverse
     proxy or load balancer that handles the SSL transport.
@@ -196,16 +196,16 @@
       (let [header (if (string? header)
                      header
                      (:header header default-header))]
-        {:name `request-forwarded-scheme
+        {:name `req-forwarded-scheme
          :enter (fn [request] (request-fn request header))}))))
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
-(declare response-content-type)                   ; ring/ring-core
+(declare resp-content-type)                       ; ring/ring-core
 
 (when-let [[response-fn] (resolve* 'ring.middleware.content-type/content-type-response)]
 
-  (defn response-content-type
+  (defn resp-content-type
     "Middleware that adds a `content-type` header to the response if one is not
     set by the handler. Uses the `ring.util.mime-type/ext-mime-type` function to
     guess the content-type from the file extension in the URI. If no content-type
@@ -222,32 +222,32 @@
     [& {:as options}]
     (when-not (false? options)
       (let [options (or options {})]
-        {:name `response-content-type
+        {:name `resp-content-type
          :leave (fn leave [response request] (response-fn response request options))}))))
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
-(declare response-not-modified)                   ; ring/ring-core
+(declare resp-not-modified)                       ; ring/ring-core
 
 (when-let [[response-fn] (resolve* 'ring.middleware.not-modified/not-modified-response)]
 
-  (defn response-not-modified
+  (defn resp-not-modified
     "Middleware that returns a `304 Not Modified` from the wrapped handler if the
     handler response has an `ETag` or `Last-Modified` header, and the request has
     a `If-None-Match` or `If-Modified-Since` header that matches the response."
     {:arglists '([] [false])}
     [& {:as options}]
     (when-not (false? options)
-      {:name `response-not-modified
+      {:name `resp-not-modified
        :leave response-fn})))
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
-(declare response-absolute-redirects)             ; ring/ring-headers
+(declare resp-absolute-redirects)                 ; ring/ring-headers
 
 (when-let [[response-fn] (resolve* 'ring.middleware.absolute-redirects/absolute-redirects-response)]
 
-  (defn response-absolute-redirects
+  (defn resp-absolute-redirects
     "Middleware that converts redirects to relative URLs into redirects to
     absolute URLs. While many browsers can handle relative URLs in the Location
     header, RFC 2616 states that the Location header must contain an absolute
@@ -255,32 +255,32 @@
     {:arglists '([] [false])}
     [& {:as options}]
     (when-not (false? options)
-      {:name `response-absolute-redirects
+      {:name `resp-absolute-redirects
        :leave response-fn})))
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
-(declare response-default-charset)                ; ring/ring-headers
+(declare resp-default-charset)                    ; ring/ring-headers
 
 (when-let [[response-fn] (resolve* 'ring.middleware.default-charset/default-charset-response)]
 
-  (defn response-default-charset
+  (defn resp-default-charset
     "Middleware that adds a charset to the `content-type` header of the response
     if one was not set by the handler."
     {:arglists '([charset] [false])}
     [charset]
     (when charset
-      {:name `response-default-charset
+      {:name `resp-default-charset
        :leave (fn leave [response _] (response-fn response charset))})))
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
-(declare response-frame-options)                  ; ring/ring-headers
+(declare resp-frame-options)                      ; ring/ring-headers
 
 (when-let [[response-fn allow-from?] (resolve* 'ring.middleware.x-headers/frame-options-response
                                                'ring.middleware.x-headers/allow-from?)]
 
-  (defn response-frame-options
+  (defn resp-frame-options
     "Middleware that adds the `X-Frame-Options` header to the response. This
     governs whether your site can be rendered in a <frame>, <iframe> or <object>,
     and is typically used to prevent clickjacking attacks.
@@ -304,18 +304,18 @@
       (assert (or (= frame-options :deny)
                   (= frame-options :sameorigin)
                   (allow-from? frame-options)))
-      {:name `response-frame-options
+      {:name `resp-frame-options
        :leave (fn leave [response _]
                 ;; TODO: review performance
                 (response-fn response frame-options))})))
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
-(declare response-content-type-options)           ; ring/ring-headers
+(declare resp-content-type-options)               ; ring/ring-headers
 
 (when-let [[response-fn] (resolve* 'ring.middleware.x-headers/content-type-options-response)]
 
-  (defn response-content-type-options
+  (defn resp-content-type-options
     "Middleware that adds the `X-Content-Type-Options` header to the response.
     This currently only accepts one option:
 
@@ -330,18 +330,18 @@
     [content-type-options]
     (when content-type-options
       (assert (= content-type-options :nosniff))
-      {:name `response-content-type-options
+      {:name `resp-content-type-options
        :leave (fn leave [response _]
                 ;; TODO: review performance
                 (response-fn response content-type-options))})))
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
-(declare response-xss-protection)                 ; ring/ring-headers
+(declare resp-xss-protection)                     ; ring/ring-headers
 
 (when-let [[response-fn] (resolve* 'ring.middleware.x-headers/xss-protection-response)]
 
-  (defn response-xss-protection
+  (defn resp-xss-protection
     "Middleware that adds the `X-XSS-Protection` header to the response. This
     header enables a heuristic filter in browsers for detecting cross-site
     scripting attacks.
@@ -358,18 +358,18 @@
       (let [enable? (:enable options)
             options (not-empty (dissoc options :enable?))]
         (assert (or (nil? options) (= options {:mode :block})))
-        {:name `response-xss-protection
+        {:name `resp-xss-protection
          :leave (fn leave [response _]
                   ;; TODO: review performance
                   (response-fn response enable? options))}))))
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
-(declare response-hsts)                           ; ring/ring-ssl
+(declare resp-hsts)                               ; ring/ring-ssl
 
 (when-let [[response-fn] (resolve* 'ring.middleware.ssl/hsts-response)]
 
-  (defn response-hsts
+  (defn resp-hsts
     "Middleware that adds the `Strict-Transport-Security` header to the response.
     This ensures the browser will only use HTTPS for future requests to the
     domain.
@@ -389,7 +389,7 @@
     [& {:as options}]
     (when-not (false? options)
       (let [options (or options {})]
-        {:name `response-hsts
+        {:name `resp-hsts
          :leave (fn [response _] (response-fn response options))}))))
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,

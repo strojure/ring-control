@@ -27,30 +27,30 @@
   [1]: https://clojars.org/ring/ring-defaults
   "
   [{:keys [proxy security responses static cookies params session]}]
-  (->> [[(ring/request-forwarded-remote-addr (-> proxy boolean))
-         (ring/request-forwarded-scheme,,,,, (-> proxy boolean))
+  (->> [[(ring/req-forwarded-remote-addr (-> proxy boolean))
+         (ring/req-forwarded-scheme,,,,, (-> proxy boolean))
 
          (ring/wrap-ssl-redirect,,,,,,,,,,,, (-> security (:ssl-redirect false)))
-         (ring/response-hsts,,,,,,,,,,,,,,,, (-> security (:hsts false)))
-         (ring/response-content-type-options (-> security (:content-type-options false)))
-         (ring/response-frame-options,,,,,,, (-> security (:frame-options false)))
-         (ring/response-xss-protection,,,,,, (-> security (:xss-protection false)))
+         (ring/resp-hsts,,,,,,,,,,,,,,,, (-> security (:hsts false)))
+         (ring/resp-content-type-options (-> security (:content-type-options false)))
+         (ring/resp-frame-options,,,,,,, (-> security (:frame-options false)))
+         (ring/resp-xss-protection,,,,,, (-> security (:xss-protection false)))
 
-         (ring/response-not-modified,,,,,, (-> responses (:not-modified-responses false)))
-         (ring/response-default-charset,,, (-> responses (:default-charset false)))
-         (ring/response-content-type,,,,,, (-> responses (:content-types false)))]
+         (ring/resp-not-modified,,,,,, (-> responses (:not-modified-responses false)))
+         (ring/resp-default-charset,,, (-> responses (:default-charset false)))
+         (ring/resp-content-type,,,,,, (-> responses (:content-types false)))]
 
         (map ring/wrap-file,,,, (-> static (:files false) as-seq))
         (map ring/wrap-resource (-> static (:resources false) as-seq))
 
-        [(ring/response-absolute-redirects (-> responses (:absolute-redirects false)))
+        [(ring/resp-absolute-redirects (-> responses (:absolute-redirects false)))
 
          (ring/wrap-cookies (or cookies false))
 
-         (ring/request-params,,,,,,,,,, (-> params (:urlencoded false)))
-         (ring/request-multipart-params (-> params (:multipart false)))
-         (ring/request-nested-params,,, (-> params (:nested false)))
-         (ring/request-keyword-params,, (-> params (:keywordize false)))
+         (ring/req-params,,,,,,,,,, (-> params (:urlencoded false)))
+         (ring/req-multipart-params (-> params (:multipart false)))
+         (ring/req-nested-params,,, (-> params (:nested false)))
+         (ring/req-keyword-params,, (-> params (:keywordize false)))
 
          (ring/wrap-session (-> session (or false)))
          (ring/wrap-flash,, (-> session (:flash false)))

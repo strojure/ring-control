@@ -38,10 +38,10 @@
     (test/are [expr]
               (= "1" (-> expr :request :params (get "a")))
 
-      (test [(ring/request-params)]
+      (test [(ring/req-params)]
             {:query-string "a=1"})
 
-      (test-async [(ring/request-params)]
+      (test-async [(ring/req-params)]
                   {:query-string "a=1"})
 
       )))
@@ -54,12 +54,12 @@
     (test/are [expr]
               (= "1" (-> expr :request :params :a))
 
-      (test [(ring/request-params)
-             (ring/request-keyword-params)]
+      (test [(ring/req-params)
+             (ring/req-keyword-params)]
             {:query-string "a=1"})
 
-      (test-async [(ring/request-params)
-                   (ring/request-keyword-params)]
+      (test-async [(ring/req-params)
+                   (ring/req-keyword-params)]
                   {:query-string "a=1"})
 
       ))
@@ -67,12 +67,12 @@
     (test/are [expr]
               (= "1" (-> expr :request :params :ns/a))
 
-      (test [(ring/request-params)
-             (ring/request-keyword-params :parse-namespaces? true)]
+      (test [(ring/req-params)
+             (ring/req-keyword-params :parse-namespaces? true)]
             {:query-string "ns/a=1"})
 
-      (test [(ring/request-params)
-             (ring/request-keyword-params {:parse-namespaces? true})]
+      (test [(ring/req-params)
+             (ring/req-keyword-params {:parse-namespaces? true})]
             {:query-string "ns/a=1"})
 
       ))
@@ -84,7 +84,7 @@
   (test/are [expr]
             (-> expr :request (contains? :multipart-params))
 
-    (test [(ring/request-multipart-params)]
+    (test [(ring/req-multipart-params)]
           {})
 
     ))
@@ -95,8 +95,8 @@
   (test/are [expr]
             (= ["bar"] (-> expr :request :params (get "foo")))
 
-    (test [(ring/request-params)
-           (ring/request-nested-params)]
+    (test [(ring/req-params)
+           (ring/req-nested-params)]
           {:query-string "foo[]=bar"})
 
     ))
@@ -108,7 +108,7 @@
     (test/are [expr]
               (= "text/html" (-> expr :headers (get "Content-Type")))
 
-      (test [(ring/response-content-type)]
+      (test [(ring/resp-content-type)]
             {:uri "/index.html"})
 
       )))
