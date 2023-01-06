@@ -30,7 +30,7 @@
   (->> [[(ring/req-forwarded-remote-addr (-> proxy boolean))
          (ring/req-forwarded-scheme,,,,, (-> proxy boolean))
 
-         (ring/wrap-ssl-redirect,,,,,,,,,,,, (-> security (:ssl-redirect false)))
+         (ring/wrap-ssl-redirect,,,,,,,, (-> security (:ssl-redirect false)))
          (ring/resp-hsts,,,,,,,,,,,,,,,, (-> security (:hsts false)))
          (ring/resp-content-type-options (-> security (:content-type-options false)))
          (ring/resp-frame-options,,,,,,, (-> security (:frame-options false)))
