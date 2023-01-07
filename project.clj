@@ -1,4 +1,4 @@
-(defproject com.github.strojure/ring-control "1.0.48-beta2"
+(defproject com.github.strojure/ring-control "1.0.49-SNAPSHOT"
   :description "More controllable composition of Ring middlewares."
   :url "https://github.com/strojure/ring-control"
   :license {:name "The MIT License" :url "http://opensource.org/licenses/MIT"}
