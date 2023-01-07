@@ -64,7 +64,7 @@
   (println :handler {:request request})
   (assoc request :trace/leave []))
 
-;; ## Test composition of wrappers
+;; ## Test middleware composition
 
 ;; - :enter before :leave
 
@@ -123,3 +123,33 @@
 
 #_#:trace{:enter [wrap1 wrap2 request1 request2 wrap3 wrap4],
           :leave [wrap4 wrap3 response2 response1 wrap2 wrap1]}
+
+;; ## Test middleware dependencies
+
+(comment
+  ;; - Require middleware before
+  (let [handler (handler/build handler* [{:leave response1 :name `response1 :deps {`request1 :before}}
+                                         {:enter request1 :name `request1}])]
+    (handler {:trace/enter []}))
+  ;clojure.lang.ExceptionInfo:
+  ; Require middleware usage.walkthrough/request1 before usage.walkthrough/response1
+  ; {:names (usage.walkthrough/response1 usage.walkthrough/request1)}
+
+  ;; - Require middleware after
+  (let [handler (handler/build handler* [{:enter request1 :name `request1}
+                                         {:leave response1 :name `response1 :deps {`wrap3 :after}}])]
+    (handler {:trace/enter []}))
+  ;clojure.lang.ExceptionInfo:
+  ; Require middleware usage.walkthrough/wrap3 after usage.walkthrough/response1
+  ; {:names (usage.walkthrough/request1 usage.walkthrough/response1)}
+
+  ;; - Ignore dependency error
+  (let [handler (handler/build handler* [{:leave response1 :name `response1 :deps {`request1 :before}}
+                                         {:enter request1 :name `request1}]
+                               {:ignored-deps #{`request1}})]
+    (handler {:trace/enter []}))
+  ;:enter request1 {:request #:trace{:enter []}}
+  ;:handler {:request #:trace{:enter [request1]}}
+  ;:leave response1 {:response #:trace{:enter [request1], :leave []}, :request #:trace{:enter []}}
+  ;=> #:trace{:enter [request1], :leave [response1]}
+  )

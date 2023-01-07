@@ -159,7 +159,8 @@
     (when-not (false? options)
       (let [options (or options {})]
         {:name `req-keyword-params
-         :enter (fn enter [request] (request-fn request options))}))))
+         :enter (fn enter [request] (request-fn request options))
+         :deps {`req-params :before}}))))
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
@@ -507,7 +508,8 @@
     (when-not (false? options)
       {:name `wrap-flash
        :enter request-fn
-       :leave response-fn})))
+       :leave response-fn
+       :deps {`wrap-session :before}})))
 
 ;;,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
