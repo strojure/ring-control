@@ -55,8 +55,8 @@ See also [walkthrough](doc/usage/walkthrough.clj).
 
 ### Ring middlewares
 
-The `strojure.ring-control.config.ring-middleware` namespace contains
-configuration for middlewares in ring libraries.
+The [ring-middleware] namespace contains configuration for middlewares in ring
+libraries.
 
 - [ring/ring-core](https://clojars.org/ring/ring-core)
 - [ring/ring-headers](https://clojars.org/ring/ring-headers)
@@ -76,3 +76,5 @@ using ring-control configurations:
 
 [handler_build]:
 https://cljdoc.org/d/com.github.strojure/ring-control/CURRENT/api/strojure.ring-control.handler#build
+[ring-middleware]:
+https://cljdoc.org/d/com.github.strojure/ring-control/CURRENT/api/strojure.ring-control.config.ring-middleware
