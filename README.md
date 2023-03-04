@@ -55,7 +55,22 @@ See also [walkthrough](doc/usage/walkthrough.clj).
 
 ### Ring middlewares
 
-TODO
+The `strojure.ring-control.config.ring-middleware` namespace contains
+configuration for middlewares in ring libraries.
+
+- [ring/ring-core](https://clojars.org/ring/ring-core)
+- [ring/ring-headers](https://clojars.org/ring/ring-headers)
+- [ring/ring-ssl](https://clojars.org/ring/ring-ssl)
+- [ring/ring-anti-forgery](https://clojars.org/ring/ring-anti-forgery)
+- [ring/ring-devel](https://clojars.org/ring/ring-devel)
+
+The libraries should be added in project dependencies explicitly for
+configuration to be used.
+
+An implementation of the [ring-defaults](https://clojars.org/ring/ring-defaults)
+using ring-control configurations:
+
+- [ring-middleware-defaults](src/strojure/ring_control/config/ring_middleware_defaults.clj).
 
 ---
 

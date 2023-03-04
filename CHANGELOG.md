@@ -8,6 +8,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 Release date `UNRELEASED`
 
+- Document ring middlewares in readme.
+
 ## `1.0.48-beta2`
 
 Release date `2023-01-07`
