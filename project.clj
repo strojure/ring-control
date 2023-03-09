@@ -1,4 +1,4 @@
-(defproject com.github.strojure/ring-control "1.0.59"
+(defproject com.github.strojure/ring-control "1.0.60-SNAPSHOT"
   :description "More controllable composition of Ring middlewares."
   :url "https://github.com/strojure/ring-control"
   :license {:name "The Unlicense" :url "https://unlicense.org"}

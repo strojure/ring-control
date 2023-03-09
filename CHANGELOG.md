@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## `1.0.53-SNAPSHOT`
+## `1.0.60-SNAPSHOT`
 
 Release date `UNRELEASED`
 
@@ -12,7 +12,7 @@ Release date `UNRELEASED`
 
 ## `1.0.59`
 
-Release date `UNRELEASED`
+Release date `2023-03-09`
 
 - (chore): Change license to Unlicense
 
