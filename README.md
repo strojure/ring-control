@@ -2,8 +2,10 @@
 
 More controllable composition of Ring middlewares.
 
-[![cljdoc badge](https://cljdoc.org/badge/com.github.strojure/ring-control)](https://cljdoc.org/d/com.github.strojure/ring-control)
 [![Clojars Project](https://img.shields.io/clojars/v/com.github.strojure/ring-control.svg)](https://clojars.org/com.github.strojure/ring-control)
+
+[![cljdoc badge](https://cljdoc.org/badge/com.github.strojure/ring-control)](https://cljdoc.org/d/com.github.strojure/ring-control)
+[![tests](https://github.com/strojure/ring-control/actions/workflows/tests.yml/badge.svg)](https://github.com/strojure/ring-control/actions/workflows/tests.yml)
 
 ## Motivation
 
