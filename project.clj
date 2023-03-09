@@ -1,7 +1,7 @@
 (defproject com.github.strojure/ring-control "1.0.53-SNAPSHOT"
   :description "More controllable composition of Ring middlewares."
   :url "https://github.com/strojure/ring-control"
-  :license {:name "The MIT License" :url "http://opensource.org/licenses/MIT"}
+  :license {:name "The Unlicense" :url "https://unlicense.org"}
 
   :dependencies []
 
